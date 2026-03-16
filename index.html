@@ -2,6 +2,39 @@
 <html>
 <head>
 <title>DNS Checker Tool</title>
+
+<style>
+
+body{
+font-family: Arial;
+margin:40px;
+}
+
+.pass{
+color:green;
+font-weight:bold;
+}
+
+.fail{
+color:red;
+font-weight:bold;
+}
+
+.box{
+border:1px solid #ccc;
+padding:15px;
+margin-top:15px;
+border-radius:6px;
+}
+
+.copy{
+cursor:pointer;
+padding:5px 10px;
+margin-top:5px;
+}
+
+</style>
+
 </head>
 
 <body>
@@ -11,20 +44,91 @@
 <input id="domain" placeholder="Enter domain">
 <button onclick="checkDNS()">Check DNS</button>
 
-<pre id="result"></pre>
+<div id="results"></div>
 
 <script>
+
+const expected = {
+
+spf: "v=spf1 include:spf.mandrillapp.com ?all",
+
+mandrill: "mandrill_verify.",
+
+dmarc: "v=DMARC1",
+
+dkim: "_domainkey"
+
+}
+
+function copy(text){
+
+navigator.clipboard.writeText(text)
+
+alert("Copied!")
+
+}
 
 async function checkDNS(){
 
 const domain = document.getElementById("domain").value
 
-const response = await fetch("https://dns.google/resolve?name=" + domain + "&type=TXT")
+const res = await fetch("https://dns.google/resolve?name=" + domain + "&type=TXT")
 
-const data = await response.json()
+const data = await res.json()
 
-document.getElementById("result").textContent =
-JSON.stringify(data,null,2)
+let txtRecords = []
+
+if(data.Answer){
+
+data.Answer.forEach(r=>{
+txtRecords.push(r.data.replace(/"/g,""))
+})
+
+}
+
+let resultsHTML = ""
+
+function check(name,match,correct){
+
+let pass = txtRecords.some(r=>r.includes(match))
+
+if(pass){
+
+resultsHTML += `
+<div class="box">
+${name}: <span class="pass">PASS</span>
+</div>
+`
+
+}else{
+
+resultsHTML += `
+<div class="box">
+${name}: <span class="fail">FAIL</span>
+
+<div>
+Correct record:
+<pre>${correct}</pre>
+
+<button class="copy" onclick="copy('${correct}')">Copy</button>
+</div>
+
+</div>
+`
+
+}
+
+}
+
+check("SPF","spf1",expected.spf)
+
+check("Mandrill Verify","mandrill_verify",expected.mandrill)
+
+check("DMARC","DMARC1",expected.dmarc)
+
+check("DKIM","domainkey",expected.dkim)
+
+document.getElementById("results").innerHTML = resultsHTML
 
 }
 
