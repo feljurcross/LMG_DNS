@@ -106,7 +106,7 @@ v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all`)
     resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`
     failedInstructions.push(`Mandrill Verification:
 No Mandrill TXT record found.
-Please generate the unique Mandrill verification code from the Mandrill dashboard or contact MyCRM Technology Support.`)
+Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`)
   }
 
   // --- DMARC ---
@@ -141,8 +141,8 @@ CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`)
   } else {
     resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="fail">FAIL</span></div>`
     failedInstructions.push(`CustomerIO / SendGrid:
-CNAME records sg1 and sg12 missing.
-Please generate these records from MyCRM Technology Support.`)
+DNS records missing.
+Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`)
   }
 
   document.getElementById("results").innerHTML = resultsHTML
