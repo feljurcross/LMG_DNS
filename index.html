@@ -3,59 +3,16 @@
 <head>
 <title>DNS Checker Tool</title>
 <style>
-body{
-  font-family: Arial;
-  margin:40px;
-}
-
-.pass{
-  color:green;
-  font-weight:bold;
-}
-
-.fail{
-  color:red;
-  font-weight:bold;
-}
-
-.box{
-  border:1px solid #ccc;
-  padding:15px;
-  margin-top:15px;
-  border-radius:6px;
-}
-
-.copy{
-  cursor:pointer;
-  padding:5px 10px;
-  margin-top:5px;
-  background:#0073e6;
-  color:#fff;
-  border:none;
-  border-radius:4px;
-}
-
-.instructions{
-  border:1px solid #0073e6;
-  background:#f0f8ff;
-  padding:15px;
-  margin-top:30px;
-  border-radius:6px;
-}
-
-.instructions h3{
-  margin-top:0;
-}
-
-pre{
-  background:#eee;
-  padding:10px;
-  border-radius:4px;
-  white-space: pre-wrap;
-}
+body{ font-family: Arial; margin:40px; }
+.pass{ color:green; font-weight:bold; }
+.fail{ color:red; font-weight:bold; }
+.box{ border:1px solid #ccc; padding:15px; margin-top:15px; border-radius:6px; }
+.copy{ cursor:pointer; padding:5px 10px; margin-top:5px; background:#0073e6; color:#fff; border:none; border-radius:4px; }
+.instructions{ border:1px solid #0073e6; background:#f0f8ff; padding:15px; margin-top:30px; border-radius:6px; }
+.instructions h3{ margin-top:0; }
+pre{ background:#eee; padding:10px; border-radius:4px; white-space: pre-wrap; }
 </style>
 </head>
-
 <body>
 <h2 style="text-align:center;">DNS Checker Tool</h2>
 
@@ -83,10 +40,15 @@ pre{
 
 <script>
 async function fetchDNS(name, type){
-  const url = `https://cloudflare-dns.com/dns-query?name=${name}&type=${type}`;
-  const res = await fetch(url, { headers: { 'Accept': 'application/dns-json' } });
-  const data = await res.json();
-  return data.Answer?.map(r => r.data.replace(/"/g,'').trim()) || [];
+  try{
+    const url = `https://cloudflare-dns.com/dns-query?name=${name}&type=${type}`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/dns-json' } });
+    const data = await res.json();
+    return data.Answer?.map(r => r.data.replace(/"/g,'').trim()) || [];
+  }catch(e){
+    console.error("Fetch DNS error:", e);
+    return [];
+  }
 }
 
 async function checkDNS(){
@@ -98,107 +60,88 @@ async function checkDNS(){
   const nonCopyable = [];
 
   try{
-    // --- TXT Records (SPF + Mandrill) ---
+    // TXT
     const txtRecords = await fetchDNS(domain, "TXT");
+    console.log("TXT Records:", txtRecords);
 
     // SPF
     const spfPass = txtRecords.some(r => r.toLowerCase().includes("spf1"));
     resultsHTML += `<div class="box">SPF: <span class="${spfPass ? 'pass':'fail'}">${spfPass ? 'PASS':'FAIL'}</span></div>`;
     if(!spfPass){
       copyable.push(`SPF TXT Record:
-Please include the following to your current SPF record:
 include:sendgrid.net include:spf.mandrillapp.com
-NOTE: Do NOT create a new SPF if one exists!
 Or create:
 v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all`);
     }
 
     // Mandrill
     const mandrillRecords = txtRecords.filter(r => r.toLowerCase().includes("mandrill_verify"));
-    if(mandrillRecords.length > 0){
-        const spacingIssue = mandrillRecords.some(r => r !== r.trim());
-        if(spacingIssue){
-            resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Spaces)</span></div>`;
-            nonCopyable.push(`Mandrill TXT Record Fix:
-Your Mandrill verification record contains extra spaces.
-Please ensure the value is EXACT with no spaces before or after:
-Example:
-mandrill_verify.xxxxxxxx`);
-        } else {
-            resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`;
-            nonCopyable.push(`Mandrill Verification:
-Mandrill TXT record is correct. No action needed.`);
-        }
+    if(mandrillRecords.length>0){
+      const spacingIssue = mandrillRecords.some(r => r !== r.trim());
+      if(spacingIssue){
+        resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Spaces)</span></div>`;
+        nonCopyable.push("Mandrill TXT record has extra spaces. Fix manually.");
+      }else{
+        resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`;
+        nonCopyable.push("Mandrill TXT record looks correct.");
+      }
     } else {
-        resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`;
-        nonCopyable.push(`Mandrill Verification:
-No Mandrill TXT record found.
-Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`);
+      resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`;
+      nonCopyable.push("No Mandrill TXT record found. Contact support.");
     }
 
-    // CustomerIO / SendGrid (Exact match)
-    const cioRecords = await fetchDNS(`customerio.${domain}`, "CNAME");
-    const sg1Records = await fetchDNS(`sg1._domainkey.${domain}`, "CNAME");
-    const sg12Records = await fetchDNS(`sg12._domainkey.${domain}`, "CNAME");
-
-    const normalize = arr => arr.map(r => r.replace(/\.$/, '').toLowerCase().trim());
+    // CustomerIO / SendGrid
+    const cio = await fetchDNS(`customerio.${domain}`,"CNAME");
+    const sg1 = await fetchDNS(`sg1._domainkey.${domain}`,"CNAME");
+    const sg12 = await fetchDNS(`sg12._domainkey.${domain}`,"CNAME");
+    const normalize = arr => arr.map(r=>r.replace(/\.$/,'').toLowerCase().trim());
     const expectedCIO = `customerio.${domain}`.toLowerCase();
     const expectedSG1 = `sg1._domainkey.${domain}`.toLowerCase();
     const expectedSG12 = `sg12._domainkey.${domain}`.toLowerCase();
-
-    const cioPass = normalize(cioRecords).includes(expectedCIO);
-    const sg1Pass = normalize(sg1Records).includes(expectedSG1);
-    const sg12Pass = normalize(sg12Records).includes(expectedSG12);
+    const cioPass = normalize(cio).includes(expectedCIO);
+    const sg1Pass = normalize(sg1).includes(expectedSG1);
+    const sg12Pass = normalize(sg12).includes(expectedSG12);
     const allCioPass = cioPass && sg1Pass && sg12Pass;
-
-    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass ? 'pass' : 'fail'}">${allCioPass ? 'PASS' : 'FAIL'}</span></div>`;
+    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass?'pass':'fail'}">${allCioPass?'PASS':'FAIL'}</span></div>`;
     if(!allCioPass){
-        nonCopyable.push(`CustomerIO / SendGrid:
-Missing or incorrect DNS records:
-- customerio CNAME
-- sg1._domainkey CNAME
-- sg12._domainkey CNAME
-Please ensure these match exactly with your system verified values.`);
-    } else {
-        nonCopyable.push(`CustomerIO / SendGrid:
-CustomerIO / SendGrid DNS records are correct. No action needed.`);
+      nonCopyable.push("CustomerIO / SendGrid missing or incorrect. Check CNAMEs.");
+    }else{
+      nonCopyable.push("CustomerIO / SendGrid DNS correct.");
     }
 
     // DMARC
-    const dmarcRecords = await fetchDNS(`_dmarc.${domain}`, "TXT");
-    const dmarcPass = dmarcRecords.some(r => r.toUpperCase().includes("DMARC1"));
+    const dmarc = await fetchDNS(`_dmarc.${domain}`,"TXT");
+    const dmarcPass = dmarc.some(r=>r.toUpperCase().includes("DMARC1"));
     resultsHTML += `<div class="box">DMARC: <span class="${dmarcPass?'pass':'fail'}">${dmarcPass?'PASS':'FAIL'}</span></div>`;
     if(!dmarcPass){
-      copyable.push(`DMARC TXT Record:
-Host: _dmarc
-Value: v=DMARC1; p=none;`);
+      copyable.push("DMARC TXT Record: v=DMARC1; p=none;");
     }
 
     // DKIM
-    const dkim1 = (await fetchDNS(`mte1._domainkey.${domain}`,"CNAME")).length > 0;
-    const dkim2 = (await fetchDNS(`mte2._domainkey.${domain}`,"CNAME")).length > 0;
-    const dkimPass = dkim1 && dkim2;
+    const dkim1 = await fetchDNS(`mte1._domainkey.${domain}`,"CNAME");
+    const dkim2 = await fetchDNS(`mte2._domainkey.${domain}`,"CNAME");
+    const dkimPass = dkim1.length>0 && dkim2.length>0;
     resultsHTML += `<div class="box">DKIM: <span class="${dkimPass?'pass':'fail'}">${dkimPass?'PASS':'FAIL'}</span></div>`;
     if(!dkimPass){
       copyable.push(`DKIM CNAME Records:
-CNAME1: mte1._domainkey.${domain} -> dkim1.mandrillapp.com
-CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`);
+mte1._domainkey -> dkim1.mandrillapp.com
+mte2._domainkey -> dkim2.mandrillapp.com`);
     }
 
-  } catch(e){
-    resultsHTML += `<div class="box">ERROR: Could not check DNS. Try again later.</div>`;
+  }catch(e){
+    console.error(e);
+    resultsHTML += `<div class="box">ERROR: Could not check DNS. See console for details.</div>`;
   }
 
   document.getElementById("results").innerHTML = resultsHTML;
   document.getElementById("copyableInstructions").innerText = copyable.join("\n\n");
-  document.getElementById("instructions-copyable").style.display = copyable.length>0 ? "block":"none";
+  document.getElementById("instructions-copyable").style.display = copyable.length>0?"block":"none";
   document.getElementById("nonCopyableInstructions").innerText = nonCopyable.join("\n\n");
-  document.getElementById("instructions-noncopyable").style.display = nonCopyable.length>0 ? "block":"none";
+  document.getElementById("instructions-noncopyable").style.display = nonCopyable.length>0?"block":"none";
 }
 
 function copyInstructions(){
-  const text = document.getElementById("copyableInstructions").innerText;
-  navigator.clipboard.writeText(text);
+  navigator.clipboard.writeText(document.getElementById("copyableInstructions").innerText);
   alert("All copyable instructions copied!");
 }
 </script>
