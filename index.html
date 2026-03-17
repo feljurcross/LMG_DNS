@@ -173,11 +173,6 @@ resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass 
 if(!allCioPass){
   nonCopyable.push(`CustomerIO / SendGrid:
 Missing or incorrect DNS records:
-
-- customerio CNAME
-- sg1._domainkey CNAME
-- sg12._domainkey CNAME
-
 Please ensure these match exactly with your system verified values.`);
 
   } catch(e){
