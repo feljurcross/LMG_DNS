@@ -188,25 +188,38 @@ CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`)
   }
 
   // --- CustomerIO / SendGrid (CNAME) ---
-  const sg1Res = await fetch(`https://dns.google/resolve?name=sg1._domainkey.${domain}&type=CNAME`)
-  const sg2Res = await fetch(`https://dns.google/resolve?name=sg2._domainkey.${domain}&type=CNAME`)
+ // --- CustomerIO (Exact Match to System) ---
 
-  const sg1Data = await sg1Res.json()
-  const sg2Data = await sg2Res.json()
+// customerio CNAME
+const cioRes = await fetch(`https://dns.google/resolve?name=customerio.${domain}&type=CNAME`)
+const cioData = await cioRes.json()
+let cio = cioData.Answer && cioData.Answer.length > 0
 
-  let sg1 = sg1Data.Answer && sg1Data.Answer.length > 0
-  let sg2 = sg2Data.Answer && sg2Data.Answer.length > 0
+// sg1 DKIM
+const sg1Res = await fetch(`https://dns.google/resolve?name=sg1._domainkey.${domain}&type=CNAME`)
+const sg1Data = await sg1Res.json()
+let sg1 = sg1Data.Answer && sg1Data.Answer.length > 0
 
-  if(sg1 && sg2){
-    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="pass">PASS</span></div>`
-  } else {
-    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="fail">FAIL</span></div>`
-    nonCopyable.push(`CustomerIO / SendGrid:
-DNS records missing.
+// sg12 DKIM (IMPORTANT: your system uses sg12, not sg2)
+const sg12Res = await fetch(`https://dns.google/resolve?name=sg12._domainkey.${domain}&type=CNAME`)
+const sg12Data = await sg12Res.json()
+let sg12 = sg12Data.Answer && sg12Data.Answer.length > 0
+
+if(cio && sg1 && sg12){
+  resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="pass">PASS</span></div>`
+} else {
+  resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="fail">FAIL</span></div>`
+
+  nonCopyable.push(`CustomerIO / SendGrid:
+Missing required DNS records.
+
+Required:
+- customerio CNAME
+- sg1 DKIM
+- sg12 DKIM
+
 Generate from SendGrid or contact MyCRM Technology Support.`)
-  }
-
-  document.getElementById("results").innerHTML = resultsHTML
+}
 
   // Copyable box
   const copyableBox = document.getElementById("instructions-copyable")
