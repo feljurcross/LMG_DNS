@@ -29,6 +29,10 @@ body{
   cursor:pointer;
   padding:5px 10px;
   margin-top:5px;
+  background:#0073e6;
+  color:#fff;
+  border:none;
+  border-radius:4px;
 }
 
 .instructions{
@@ -58,24 +62,13 @@ pre{
 <button onclick="checkDNS()">Check DNS</button>
 
 <div id="results"></div>
-
 <div id="instructions" class="instructions" style="display:none;"></div>
 
 <script>
-const expected = {
-  spf: "v=spf1 include:spf.mandrillapp.com ?all",
-  mandrill: "mandrill_verify.",
-  dmarc: "v=DMARC1",
-  dkim: "_domainkey"
-}
-
-function copy(text){
-  navigator.clipboard.writeText(text)
-  alert("Copied!")
-}
-
 async function checkDNS(){
-  const domain = document.getElementById("domain").value
+  const domain = document.getElementById("domain").value.trim()
+  if(!domain) return alert("Please enter a domain")
+
   const res = await fetch("https://dns.google/resolve?name=" + domain + "&type=TXT")
   const data = await res.json()
   let txtRecords = []
@@ -86,73 +79,91 @@ async function checkDNS(){
   }
 
   let resultsHTML = ""
-  function check(name,match,correct){
-    let pass = txtRecords.some(r=>r.includes(match))
-    if(pass){
-      resultsHTML += `
-      <div class="box">
-      ${name}: <span class="pass">PASS</span>
-      </div>
-      `
-    }else{
-      resultsHTML += `
-      <div class="box">
-      ${name}: <span class="fail">FAIL</span>
-      <div>
-      Correct record:
-      <pre>${correct}</pre>
-      <button class="copy" onclick="copy('${correct}')">Copy</button>
-      </div>
-      </div>
-      `
-    }
+  const failedInstructions = []
+
+  // --- SPF ---
+  let spfPass = txtRecords.some(r=>r.includes("spf1"))
+  if(spfPass){
+    resultsHTML += `<div class="box">SPF: <span class="pass">PASS</span></div>`
+  } else {
+    resultsHTML += `<div class="box">SPF: <span class="fail">FAIL</span></div>`
+    failedInstructions.push(`SPF TXT Record:
+Please include the following to your current SPF record:
+
+include:sendgrid.net include:spf.mandrillapp.com
+NOTE: Please add to your existing SPF record (!DO NOT create a new SPF!)
+
+Or if you don’t have a current SPF record, create one with:
+
+v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all`)
   }
 
-  check("SPF","spf1",expected.spf)
-  check("Mandrill Verify","mandrill_verify",expected.mandrill)
-  check("DMARC","DMARC1",expected.dmarc)
-  check("DKIM","domainkey",expected.dkim)
+  // --- Mandrill ---
+  let mandrillPass = txtRecords.some(r=>r.includes("mandrill_"))
+  if(mandrillPass){
+    resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`
+  } else {
+    resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`
+    failedInstructions.push(`Mandrill Verification:
+No Mandrill TXT record found.
+Please generate the unique Mandrill verification code from the Mandrill dashboard or contact MyCRM Technology Support.`)
+  }
+
+  // --- DMARC ---
+  let dmarcPass = txtRecords.some(r=>r.includes("DMARC1"))
+  if(dmarcPass){
+    resultsHTML += `<div class="box">DMARC: <span class="pass">PASS</span></div>`
+  } else {
+    resultsHTML += `<div class="box">DMARC: <span class="fail">FAIL</span></div>`
+    failedInstructions.push(`DMARC TXT Record:
+Create the following TXT record:
+
+v=DMARC1; p=none;`)
+  }
+
+  // --- DKIM ---
+  let dkim1 = txtRecords.some(r=>r.includes("mte1._domainkey"))
+  let dkim2 = txtRecords.some(r=>r.includes("mte2._domainkey"))
+  if(dkim1 && dkim2){
+    resultsHTML += `<div class="box">DKIM: <span class="pass">PASS</span></div>`
+  } else {
+    resultsHTML += `<div class="box">DKIM: <span class="fail">FAIL</span></div>`
+    failedInstructions.push(`DKIM CNAME Records:
+CNAME1: mte1._domainkey.${domain} -> dkim1.mandrillapp.com
+CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`)
+  }
+
+  // --- CustomerIO / SendGrid ---
+  let sg1 = txtRecords.some(r=>r.includes("sg1"))
+  let sg12 = txtRecords.some(r=>r.includes("sg12"))
+  if(sg1 && sg12){
+    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="pass">PASS</span></div>`
+  } else {
+    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="fail">FAIL</span></div>`
+    failedInstructions.push(`CustomerIO / SendGrid:
+CNAME records sg1 and sg12 missing.
+Please generate these records from MyCRM Technology Support.`)
+  }
 
   document.getElementById("results").innerHTML = resultsHTML
 
-  // Show instructions dynamically
-  document.getElementById("instructions").style.display = "block"
-  document.getElementById("instructions").innerHTML = `
-    <h3>Instructions for DNS Records</h3>
-    <ol>
-      <li>
-        <strong>SPF TXT Record</strong><br>
-        Please include the following to your current SPF record:<br>
-        <pre>include:sendgrid.net include:spf.mandrillapp.com</pre>
-        <strong>NOTE:</strong> Please add to your existing SPF record (!DO NOT create a new SPF!)<br>
-        Or if you don’t have a current SPF record, create one with:<br>
-        <pre>v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all</pre>
-      </li>
-      <li>
-        <strong>Mandrill Verification Record</strong><br>
-        Create a TXT record in your domain's DNS records with the following value:<br>
-        <pre>mandrill_verify.${domain}</pre>
-      </li>
-      <li>
-        <strong>DMARC Record</strong><br>
-        Create a TXT record in your DNS with the following value:<br>
-        <pre>v=DMARC1; p=none;</pre>
-      </li>
-      <li>
-        <strong>DKIM Records</strong><br>
-        Create two CNAME records:<br>
-        DKIM1: <pre>mte1._domainkey.${domain} -> dkim1.mandrillapp.com</pre>
-        DKIM2: <pre>mte2._domainkey.${domain} -> dkim2.mandrillapp.com</pre>
-      </li>
-      <li>
-        <strong>CustomerIO and Mandrill CNAME Records</strong><br>
-        <pre>mandrill.${domain} -> mandrillapp.com</pre>
-        <pre>email.${domain} -> e.customeriomail.com</pre>
-      </li>
-    </ol>
-  `
+  // Show instructions only if there is a failed item
+  const instructionsBox = document.getElementById("instructions")
+  if(failedInstructions.length > 0){
+    instructionsBox.style.display = "block"
+    instructionsBox.innerHTML = `<h3>Instructions for Failed Records</h3>
+<pre id="allInstructions">${failedInstructions.join("\n\n---\n\n")}</pre>
+<button class="copy" onclick="copyInstructions()">Copy All Instructions</button>`
+  } else {
+    instructionsBox.style.display = "none"
+  }
+}
+
+function copyInstructions(){
+  const text = document.getElementById("allInstructions").innerText
+  navigator.clipboard.writeText(text)
+  alert("All instructions copied!")
 }
 </script>
-
 </body>
 </html>
