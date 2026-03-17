@@ -120,9 +120,7 @@ v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all`);
       if(spacingIssue){
         resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Spaces)</span></div>`;
         copyable.push(`Mandrill TXT Record Fix:
-Remove leading/trailing spaces.
-Example:
-mandrill_verify.xxxxxxxx`);
+Remove leading/trailing spaces.`);
       } else {
         resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`;
       }
