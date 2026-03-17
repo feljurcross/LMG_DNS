@@ -113,23 +113,50 @@ Or create:
 v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all`);
     }
 
-    // Mandrill
-    const mandrillRecords = txtRecords.filter(r => r.includes("mandrill_verify"));
-    if(mandrillRecords.length > 0){
-      const spacingIssue = mandrillRecords.some(r => r !== r.trim());
-      if(spacingIssue){
+// Mandrill
+const mandrillRecords = txtRecords.filter(r => r.includes("mandrill_verify"));
+if(mandrillRecords.length > 0){
+    const spacingIssue = mandrillRecords.some(r => r !== r.trim());
+    if(spacingIssue){
         resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Spaces)</span></div>`;
-        copyable.push(`Mandrill TXT Record Fix:
-Remove leading/trailing spaces.`);
-      } else {
-        resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`;
-      }
+        // Move to nonCopyable instead of copyable
+        nonCopyable.push(`Mandrill TXT Record Fix:
+Your Mandrill verification record contains extra spaces.
+Please ensure the value is EXACT with no spaces before or after:
+Example:
+mandrill_verify.xxxxxxxx`);
     } else {
-      resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`;
-      nonCopyable.push(`Mandrill Verification:
+        resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`;
+    }
+} else {
+    resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`;
+    nonCopyable.push(`Mandrill Verification:
 No Mandrill TXT record found.
 Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`);
-    }
+}
+
+// CustomerIO / SendGrid (Exact match)
+const cioRecords = await fetchDNS(`customerio.${domain}`, "CNAME");
+const sg1Records = await fetchDNS(`sg1._domainkey.${domain}`, "CNAME");
+const sg12Records = await fetchDNS(`sg12._domainkey.${domain}`, "CNAME");
+
+const normalize = arr => arr.map(r => r.replace(/\.$/, ''));
+const cioPass = normalize(cioRecords).includes(`customerio.${domain}`);
+const sg1Pass = normalize(sg1Records).includes(`sg1._domainkey.${domain}`);
+const sg12Pass = normalize(sg12Records).includes(`sg12._domainkey.${domain}`);
+
+const allCioPass = cioPass && sg1Pass && sg12Pass;
+
+resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass ? 'pass' : 'fail'}">${allCioPass ? 'PASS' : 'FAIL'}</span></div>`;
+
+if(!allCioPass){
+    nonCopyable.push(`CustomerIO / SendGrid:
+Missing or incorrect DNS records:
+- customerio CNAME
+- sg1._domainkey CNAME
+- sg12._domainkey CNAME
+Please ensure these match exactly with your system verified values.`);
+}
 
     // DMARC
     const dmarcRecords = await fetchDNS(`_dmarc.${domain}`, "TXT");
