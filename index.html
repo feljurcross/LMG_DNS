@@ -90,20 +90,21 @@ async function checkDNS(){
   const domain = document.getElementById("domain").value.trim()
   if(!domain) return alert("Please enter a domain")
 
-  const res = await fetch("https://dns.google/resolve?name=" + domain + "&type=TXT")
-  const data = await res.json()
-  let txtRecords = []
-  if(data.Answer){
-    data.Answer.forEach(r=>{
-      txtRecords.push(r.data.replace(/"/g,""))
-    })
-  }
-
   let resultsHTML = ""
   const copyable = []
   const nonCopyable = []
 
-  // --- SPF ---
+  // --- SPF (ROOT TXT) ---
+  const spfRes = await fetch(`https://dns.google/resolve?name=${domain}&type=TXT`)
+  const spfData = await spfRes.json()
+
+  let txtRecords = []
+  if(spfData.Answer){
+    spfData.Answer.forEach(r=>{
+      txtRecords.push(r.data.replace(/"/g,""))
+    })
+  }
+
   let spfPass = txtRecords.some(r=>r.includes("spf1"))
   if(spfPass){
     resultsHTML += `<div class="box">SPF: <span class="pass">PASS</span></div>`
@@ -120,19 +121,42 @@ Or if you don’t have a current SPF record, create one with:
 v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all`)
   }
 
-  // --- Mandrill ---
-  let mandrillPass = txtRecords.some(r=>r.includes("mandrill_"))
-  if(mandrillPass){
-    resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`
+  // --- Mandrill (ROOT TXT with space validation) ---
+  let mandrillRecords = txtRecords.filter(r => r.includes("mandrill_verify"))
+
+  if(mandrillRecords.length > 0){
+
+    let hasSpacingIssue = mandrillRecords.some(r => r !== r.trim())
+
+    if(hasSpacingIssue){
+      resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Trailing/Leading Spaces)</span></div>`
+      
+      copyable.push(`Mandrill TXT Record Fix:
+Your Mandrill verification record contains extra spaces.
+
+Please ensure the value is EXACT with no spaces before or after:
+
+Example:
+mandrill_verify.xxxxxxxx`)
+      
+    } else {
+      resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`
+    }
+
   } else {
     resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`
+    
     nonCopyable.push(`Mandrill Verification:
 No Mandrill TXT record found.
 Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`)
   }
 
-  // --- DMARC ---
-  let dmarcPass = txtRecords.some(r=>r.includes("DMARC1"))
+  // --- DMARC (SUBDOMAIN TXT) ---
+  const dmarcRes = await fetch(`https://dns.google/resolve?name=_dmarc.${domain}&type=TXT`)
+  const dmarcData = await dmarcRes.json()
+
+  let dmarcPass = dmarcData.Answer && dmarcData.Answer.some(r => r.data.includes("DMARC1"))
+
   if(dmarcPass){
     resultsHTML += `<div class="box">DMARC: <span class="pass">PASS</span></div>`
   } else {
@@ -140,12 +164,20 @@ Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`)
     copyable.push(`DMARC TXT Record:
 Create the following TXT record:
 
-v=DMARC1; p=none;`)
+Host: _dmarc
+Value: v=DMARC1; p=none;`)
   }
 
-  // --- DKIM ---
-  let dkim1 = txtRecords.some(r=>r.includes("mte1._domainkey"))
-  let dkim2 = txtRecords.some(r=>r.includes("mte2._domainkey"))
+  // --- DKIM (CNAME) ---
+  const dkim1Res = await fetch(`https://dns.google/resolve?name=mte1._domainkey.${domain}&type=CNAME`)
+  const dkim2Res = await fetch(`https://dns.google/resolve?name=mte2._domainkey.${domain}&type=CNAME`)
+
+  const dkim1Data = await dkim1Res.json()
+  const dkim2Data = await dkim2Res.json()
+
+  let dkim1 = dkim1Data.Answer && dkim1Data.Answer.length > 0
+  let dkim2 = dkim2Data.Answer && dkim2Data.Answer.length > 0
+
   if(dkim1 && dkim2){
     resultsHTML += `<div class="box">DKIM: <span class="pass">PASS</span></div>`
   } else {
@@ -155,10 +187,17 @@ CNAME1: mte1._domainkey.${domain} -> dkim1.mandrillapp.com
 CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`)
   }
 
-  // --- CustomerIO / SendGrid ---
-  let sg1 = txtRecords.some(r=>r.includes("sg1"))
-  let sg12 = txtRecords.some(r=>r.includes("sg12"))
-  if(sg1 && sg12){
+  // --- CustomerIO / SendGrid (CNAME) ---
+  const sg1Res = await fetch(`https://dns.google/resolve?name=sg1._domainkey.${domain}&type=CNAME`)
+  const sg2Res = await fetch(`https://dns.google/resolve?name=sg2._domainkey.${domain}&type=CNAME`)
+
+  const sg1Data = await sg1Res.json()
+  const sg2Data = await sg2Res.json()
+
+  let sg1 = sg1Data.Answer && sg1Data.Answer.length > 0
+  let sg2 = sg2Data.Answer && sg2Data.Answer.length > 0
+
+  if(sg1 && sg2){
     resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="pass">PASS</span></div>`
   } else {
     resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="fail">FAIL</span></div>`
@@ -169,7 +208,7 @@ Generate from SendGrid or contact MyCRM Technology Support.`)
 
   document.getElementById("results").innerHTML = resultsHTML
 
-  // Show copyable instructions
+  // Copyable box
   const copyableBox = document.getElementById("instructions-copyable")
   if(copyable.length > 0){
     copyableBox.style.display = "block"
@@ -178,7 +217,7 @@ Generate from SendGrid or contact MyCRM Technology Support.`)
     copyableBox.style.display = "none"
   }
 
-  // Show non-copyable instructions
+  // Non-copyable box
   const nonCopyBox = document.getElementById("instructions-noncopyable")
   if(nonCopyable.length > 0){
     nonCopyBox.style.display = "block"
@@ -193,6 +232,7 @@ function copyInstructions(){
   navigator.clipboard.writeText(text)
   alert("All copyable instructions copied!")
 }
+</script>
 </script>
 </body>
 </html>
