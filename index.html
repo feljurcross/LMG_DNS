@@ -154,24 +154,23 @@ CNAME1: mte1._domainkey.${domain} -> dkim1.mandrillapp.com
 CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`);
     }
 
-// CustomerIO / SendGrid exact match
-const cioRecords = await fetchDNS(`customerio.${domain}`, "CNAME");
-const sg1Records = await fetchDNS(`sg1._domainkey.${domain}`, "CNAME");
-const sg12Records = await fetchDNS(`sg12._domainkey.${domain}`, "CNAME");
+    // CustomerIO / SendGrid exact match
+    const cioRecords = await fetchDNS(`customerio.${domain}`, "CNAME");
+    const sg1Records = await fetchDNS(`sg1._domainkey.${domain}`, "CNAME");
+    const sg12Records = await fetchDNS(`sg12._domainkey.${domain}`, "CNAME");
 
-// Normalize: remove trailing dot
-const normalize = arr => arr.map(r => r.replace(/\.$/, ''));
+    const normalize = arr => arr.map(r => r.replace(/\.$/, ''));
 
-const cioPass = normalize(cioRecords).includes(`customerio.${domain}`);
-const sg1Pass = normalize(sg1Records).includes(`sg1._domainkey.${domain}`);
-const sg12Pass = normalize(sg12Records).includes(`sg12._domainkey.${domain}`);
+    const cioPass = normalize(cioRecords).includes(`customerio.${domain}`);
+    const sg1Pass = normalize(sg1Records).includes(`sg1._domainkey.${domain}`);
+    const sg12Pass = normalize(sg12Records).includes(`sg12._domainkey.${domain}`);
 
-const allCioPass = cioPass && sg1Pass && sg12Pass;
+    const allCioPass = cioPass && sg1Pass && sg12Pass;
 
-resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass ? 'pass' : 'fail'}">${allCioPass ? 'PASS' : 'FAIL'}</span></div>`;
+    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass ? 'pass' : 'fail'}">${allCioPass ? 'PASS' : 'FAIL'}</span></div>`;
 
-if(!allCioPass){
-  nonCopyable.push(`CustomerIO / SendGrid:
+    if(!allCioPass){
+      nonCopyable.push(`CustomerIO / SendGrid:
 Missing or incorrect DNS records:
 
 - customerio CNAME
@@ -179,6 +178,7 @@ Missing or incorrect DNS records:
 - sg12._domainkey CNAME
 
 Please ensure these match exactly with your system verified values.`);
+    }
 
   } catch(e){
     resultsHTML += `<div class="box">ERROR: Could not check DNS. Try again later.</div>`;
