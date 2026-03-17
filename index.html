@@ -154,7 +154,7 @@ CNAME1: mte1._domainkey.${domain} -> dkim1.mandrillapp.com
 CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`);
     }
 
-  // CustomerIO / SendGrid exact match
+// CustomerIO / SendGrid exact match
 const cioRecords = await fetchDNS(`customerio.${domain}`, "CNAME");
 const sg1Records = await fetchDNS(`sg1._domainkey.${domain}`, "CNAME");
 const sg12Records = await fetchDNS(`sg12._domainkey.${domain}`, "CNAME");
@@ -173,7 +173,12 @@ resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass 
 if(!allCioPass){
   nonCopyable.push(`CustomerIO / SendGrid:
 Missing or incorrect DNS records:
-Please verify the records from Sendgrid or contact MyCRM Technology Support.`);
+
+- customerio CNAME
+- sg1._domainkey CNAME
+- sg12._domainkey CNAME
+
+Please ensure these match exactly with your system verified values.`);
 
   } catch(e){
     resultsHTML += `<div class="box">ERROR: Could not check DNS. Try again later.</div>`;
