@@ -51,6 +51,7 @@ pre{
   background:#eee;
   padding:10px;
   border-radius:4px;
+  white-space: pre-wrap;
 }
 </style>
 </head>
@@ -62,7 +63,19 @@ pre{
 <button onclick="checkDNS()">Check DNS</button>
 
 <div id="results"></div>
-<div id="instructions" class="instructions" style="display:none;"></div>
+
+<!-- Copyable instructions -->
+<div id="instructions-copyable" class="instructions" style="display:none;">
+  <h3>Instructions (Copyable by Level 1)</h3>
+  <pre id="copyableInstructions"></pre>
+  <button class="copy" onclick="copyInstructions()">Copy All Instructions</button>
+</div>
+
+<!-- Non-copyable instructions -->
+<div id="instructions-noncopyable" class="instructions" style="display:none;">
+  <h3>Instructions (Requires MyCRM Technology Support)</h3>
+  <pre id="nonCopyableInstructions"></pre>
+</div>
 
 <script>
 async function checkDNS(){
@@ -79,7 +92,8 @@ async function checkDNS(){
   }
 
   let resultsHTML = ""
-  const failedInstructions = []
+  const copyable = []
+  const nonCopyable = []
 
   // --- SPF ---
   let spfPass = txtRecords.some(r=>r.includes("spf1"))
@@ -87,7 +101,7 @@ async function checkDNS(){
     resultsHTML += `<div class="box">SPF: <span class="pass">PASS</span></div>`
   } else {
     resultsHTML += `<div class="box">SPF: <span class="fail">FAIL</span></div>`
-    failedInstructions.push(`SPF TXT Record:
+    copyable.push(`SPF TXT Record:
 Please include the following to your current SPF record:
 
 include:sendgrid.net include:spf.mandrillapp.com
@@ -104,7 +118,7 @@ v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all`)
     resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`
   } else {
     resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`
-    failedInstructions.push(`Mandrill Verification:
+    nonCopyable.push(`Mandrill Verification:
 No Mandrill TXT record found.
 Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`)
   }
@@ -115,7 +129,7 @@ Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`)
     resultsHTML += `<div class="box">DMARC: <span class="pass">PASS</span></div>`
   } else {
     resultsHTML += `<div class="box">DMARC: <span class="fail">FAIL</span></div>`
-    failedInstructions.push(`DMARC TXT Record:
+    copyable.push(`DMARC TXT Record:
 Create the following TXT record:
 
 v=DMARC1; p=none;`)
@@ -128,7 +142,7 @@ v=DMARC1; p=none;`)
     resultsHTML += `<div class="box">DKIM: <span class="pass">PASS</span></div>`
   } else {
     resultsHTML += `<div class="box">DKIM: <span class="fail">FAIL</span></div>`
-    failedInstructions.push(`DKIM CNAME Records:
+    copyable.push(`DKIM CNAME Records:
 CNAME1: mte1._domainkey.${domain} -> dkim1.mandrillapp.com
 CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`)
   }
@@ -140,29 +154,36 @@ CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`)
     resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="pass">PASS</span></div>`
   } else {
     resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="fail">FAIL</span></div>`
-    failedInstructions.push(`CustomerIO / SendGrid:
+    nonCopyable.push(`CustomerIO / SendGrid:
 DNS records missing.
 Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`)
   }
 
   document.getElementById("results").innerHTML = resultsHTML
 
-  // Show instructions only if there is a failed item
-  const instructionsBox = document.getElementById("instructions")
-  if(failedInstructions.length > 0){
-    instructionsBox.style.display = "block"
-    instructionsBox.innerHTML = `<h3>Instructions for Failed Records</h3>
-<pre id="allInstructions">${failedInstructions.join("\n\n---\n\n")}</pre>
-<button class="copy" onclick="copyInstructions()">Copy All Instructions</button>`
+  // Show copyable instructions
+  const copyableBox = document.getElementById("instructions-copyable")
+  if(copyable.length > 0){
+    copyableBox.style.display = "block"
+    document.getElementById("copyableInstructions").innerText = copyable.join("\n\n")
   } else {
-    instructionsBox.style.display = "none"
+    copyableBox.style.display = "none"
+  }
+
+  // Show non-copyable instructions
+  const nonCopyBox = document.getElementById("instructions-noncopyable")
+  if(nonCopyable.length > 0){
+    nonCopyBox.style.display = "block"
+    document.getElementById("nonCopyableInstructions").innerText = nonCopyable.join("\n\n")
+  } else {
+    nonCopyBox.style.display = "none"
   }
 }
 
 function copyInstructions(){
-  const text = document.getElementById("allInstructions").innerText
+  const text = document.getElementById("copyableInstructions").innerText
   navigator.clipboard.writeText(text)
-  alert("All instructions copied!")
+  alert("All copyable instructions copied!")
 }
 </script>
 </body>
