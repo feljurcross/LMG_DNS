@@ -82,122 +82,108 @@ pre{
 </div>
 
 <script>
-async function checkDNS(){
-  const domain = document.getElementById("domain").value.trim()
-  if(!domain) return alert("Please enter a domain")
+async function fetchDNS(name, type){
+  const url = `https://cloudflare-dns.com/dns-query?name=${name}&type=${type}`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/dns-json' } });
+  const data = await res.json();
+  return data.Answer?.map(r => r.data.replace(/"/g,'')) || [];
+}
 
-  let resultsHTML = ""
-  const copyable = []
-  const nonCopyable = []
+async function checkDNS(){
+  const domain = document.getElementById("domain").value.trim();
+  if(!domain) return alert("Please enter a domain");
+
+  let resultsHTML = "";
+  const copyable = [];
+  const nonCopyable = [];
 
   try{
     // --- TXT Records (SPF + Mandrill) ---
-    const txtRes = await fetch(`https://dns.google/resolve?name=${domain}&type=TXT`)
-    const txtData = await txtRes.json()
-    const txtRecords = txtData.Answer?.map(r => r.data.replace(/"/g,"")) || []
+    const txtRecords = await fetchDNS(domain, "TXT");
 
     // SPF
-    const spfPass = txtRecords.some(r => r.includes("spf1"))
-    if(spfPass){
-      resultsHTML += `<div class="box">SPF: <span class="pass">PASS</span></div>`
-    } else {
-      resultsHTML += `<div class="box">SPF: <span class="fail">FAIL</span></div>`
+    const spfPass = txtRecords.some(r => r.includes("spf1"));
+    resultsHTML += `<div class="box">SPF: <span class="${spfPass ? 'pass':'fail'}">${spfPass ? 'PASS':'FAIL'}</span></div>`;
+    if(!spfPass){
       copyable.push(`SPF TXT Record:
 Please include the following to your current SPF record:
 include:sendgrid.net include:spf.mandrillapp.com
 NOTE: Do NOT create a new SPF if one exists!
 Or create:
-v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all`)
+v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all`);
     }
 
-    // Mandrill (check spacing)
-    const mandrillRecords = txtRecords.filter(r => r.includes("mandrill_verify"))
+    // Mandrill
+    const mandrillRecords = txtRecords.filter(r => r.includes("mandrill_verify"));
     if(mandrillRecords.length > 0){
-      const spacingIssue = mandrillRecords.some(r => r !== r.trim())
+      const spacingIssue = mandrillRecords.some(r => r !== r.trim());
       if(spacingIssue){
-        resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Spaces)</span></div>`
+        resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Spaces)</span></div>`;
         copyable.push(`Mandrill TXT Record Fix:
-Remove any leading/trailing spaces.
+Remove leading/trailing spaces.
 Example:
-mandrill_verify.xxxxxxxx`)
+mandrill_verify.xxxxxxxx`);
       } else {
-        resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`
+        resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`;
       }
     } else {
-      resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`
+      resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`;
       nonCopyable.push(`Mandrill Verification:
 No Mandrill TXT record found.
-Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`)
+Generate from Mailchimp Mandrill or contact MyCRM Technology Support.`);
     }
 
-    // --- DMARC ---
-    const dmarcRes = await fetch(`https://dns.google/resolve?name=_dmarc.${domain}&type=TXT`)
-    const dmarcData = await dmarcRes.json()
-    const dmarcPass = dmarcData.Answer?.some(r => r.data.includes("DMARC1")) || false
-    if(dmarcPass){
-      resultsHTML += `<div class="box">DMARC: <span class="pass">PASS</span></div>`
-    } else {
-      resultsHTML += `<div class="box">DMARC: <span class="fail">FAIL</span></div>`
+    // DMARC
+    const dmarcRecords = await fetchDNS(`_dmarc.${domain}`, "TXT");
+    const dmarcPass = dmarcRecords.some(r => r.includes("DMARC1"));
+    resultsHTML += `<div class="box">DMARC: <span class="${dmarcPass?'pass':'fail'}">${dmarcPass?'PASS':'FAIL'}</span></div>`;
+    if(!dmarcPass){
       copyable.push(`DMARC TXT Record:
 Host: _dmarc
-Value: v=DMARC1; p=none;`)
+Value: v=DMARC1; p=none;`);
     }
 
-    // --- DKIM ---
-    const dkim1Res = await fetch(`https://dns.google/resolve?name=mte1._domainkey.${domain}&type=CNAME`)
-    const dkim2Res = await fetch(`https://dns.google/resolve?name=mte2._domainkey.${domain}&type=CNAME`)
-    const dkim1Pass = dkim1Res.ok && (await dkim1Res.json()).Answer?.length > 0
-    const dkim2Pass = dkim2Res.ok && (await dkim2Res.json()).Answer?.length > 0
-    if(dkim1Pass && dkim2Pass){
-      resultsHTML += `<div class="box">DKIM: <span class="pass">PASS</span></div>`
-    } else {
-      resultsHTML += `<div class="box">DKIM: <span class="fail">FAIL</span></div>`
+    // DKIM
+    const dkim1 = (await fetchDNS(`mte1._domainkey.${domain}`,"CNAME")).length > 0;
+    const dkim2 = (await fetchDNS(`mte2._domainkey.${domain}`,"CNAME")).length > 0;
+    const dkimPass = dkim1 && dkim2;
+    resultsHTML += `<div class="box">DKIM: <span class="${dkimPass?'pass':'fail'}">${dkimPass?'PASS':'FAIL'}</span></div>`;
+    if(!dkimPass){
       copyable.push(`DKIM CNAME Records:
 CNAME1: mte1._domainkey.${domain} -> dkim1.mandrillapp.com
-CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`)
+CNAME2: mte2._domainkey.${domain} -> dkim2.mandrillapp.com`);
     }
 
-    // --- CustomerIO / SendGrid (Exact match) ---
-    const cioRes = await fetch(`https://dns.google/resolve?name=customerio.${domain}&type=CNAME`)
-    const cioData = await cioRes.json()
-    const cioPass = cioData.Answer?.some(r => r.data.includes("customerio")) || false
-
-    const sg1Res = await fetch(`https://dns.google/resolve?name=sg1._domainkey.${domain}&type=CNAME`)
-    const sg1Data = await sg1Res.json()
-    const sg1Pass = sg1Data.Answer?.some(r => r.data.includes("sg1")) || false
-
-    const sg12Res = await fetch(`https://dns.google/resolve?name=sg12._domainkey.${domain}&type=CNAME`)
-    const sg12Data = await sg12Res.json()
-    const sg12Pass = sg12Data.Answer?.some(r => r.data.includes("sg12")) || false
-
-    if(cioPass && sg1Pass && sg12Pass){
-      resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="pass">PASS</span></div>`
-    } else {
-      resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="fail">FAIL</span></div>`
+    // CustomerIO / SendGrid
+    const cio = (await fetchDNS(`customerio.${domain}`,"CNAME")).some(r => r.includes("customerio"));
+    const sg1 = (await fetchDNS(`sg1._domainkey.${domain}`,"CNAME")).some(r => r.includes("sg1"));
+    const sg12 = (await fetchDNS(`sg12._domainkey.${domain}`,"CNAME")).some(r => r.includes("sg12"));
+    const cioPass = cio && sg1 && sg12;
+    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${cioPass?'pass':'fail'}">${cioPass?'PASS':'FAIL'}</span></div>`;
+    if(!cioPass){
       nonCopyable.push(`CustomerIO / SendGrid:
 Missing required DNS records:
 - customerio CNAME
 - sg1 DKIM
 - sg12 DKIM
-Generate from SendGrid or contact MyCRM Technology Support.`)
+Generate from SendGrid or contact MyCRM Technology Support.`);
     }
 
   } catch(e){
-    resultsHTML += `<div class="box">ERROR: Could not check DNS. Try again later.</div>`
+    resultsHTML += `<div class="box">ERROR: Could not check DNS. Try again later.</div>`;
   }
 
-  document.getElementById("results").innerHTML = resultsHTML
-  document.getElementById("copyableInstructions").innerText = copyable.join("\n\n")
-  document.getElementById("instructions-copyable").style.display = copyable.length > 0 ? "block" : "none"
-
-  document.getElementById("nonCopyableInstructions").innerText = nonCopyable.join("\n\n")
-  document.getElementById("instructions-noncopyable").style.display = nonCopyable.length > 0 ? "block" : "none"
+  document.getElementById("results").innerHTML = resultsHTML;
+  document.getElementById("copyableInstructions").innerText = copyable.join("\n\n");
+  document.getElementById("instructions-copyable").style.display = copyable.length>0 ? "block":"none";
+  document.getElementById("nonCopyableInstructions").innerText = nonCopyable.join("\n\n");
+  document.getElementById("instructions-noncopyable").style.display = nonCopyable.length>0 ? "block":"none";
 }
 
 function copyInstructions(){
-  const text = document.getElementById("copyableInstructions").innerText
-  navigator.clipboard.writeText(text)
-  alert("All copyable instructions copied!")
+  const text = document.getElementById("copyableInstructions").innerText;
+  navigator.clipboard.writeText(text);
+  alert("All copyable instructions copied!");
 }
 </script>
 </body>
