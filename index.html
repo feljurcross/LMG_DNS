@@ -64,7 +64,7 @@ pre{
 <body>
 <div class="container">
 
-  <h2 style="text-align:center;">DNS Checker Tool
+  ## DNS Checker Tool
 
   <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:20px;">
     <input id="domain" placeholder="Enter domain" style="width:300px; padding:8px;">
@@ -110,11 +110,14 @@ async function checkDNS(){
     // --- TXT Records (SPF + Mandrill) ---
     const txtRecords = await fetchDNS(domain, "TXT");
 
-    // 1. SPF - checks for both required includes
-    const spfPass = txtRecords.some(r =>
+    // 1. SPF - checks for both required includes, shows raw value
+    const spfRecord = txtRecords.find(r =>
       r.includes("include:sendgrid.net") && r.includes("include:spf.mandrillapp.com")
     );
-    resultsHTML += `<div class="box">SPF: <span class="${spfPass?'pass':'fail'}">${spfPass?'PASS':'FAIL'}</span></div>`;
+    const spfPass = !!spfRecord;
+    const spfRaw = txtRecords.find(r => r.includes("spf1")) || 'No SPF record found';
+    resultsHTML += `<div class="box">SPF: <span class="${spfPass?'pass':'fail'}">${spfPass?'PASS':'FAIL'}</span><br>
+      <small>Raw value: ${spfRaw}</small></div>`;
     if(!spfPass){
       copyable.push(`SPF TXT Record:
 Please include in your SPF:
@@ -142,10 +145,10 @@ Please remove leading/trailing spaces.`);
       nonCopyable.push(`No Mandrill TXT record found. Contact MyCRM Technology Support.`);
     }
 
-    // 3. DMARC - must have v=DMARC1 and p=quarantine
+    // 3. DMARC - UPDATED: accepts both p=none and p=quarantine
     const dmarcRecords = await fetchDNS(`_dmarc.${domain}`,"TXT");
     const dmarcPass = dmarcRecords.some(r =>
-      r.includes("v=DMARC1") && r.includes("p=quarantine")
+      r.includes("v=DMARC1") && (r.includes("p=none") || r.includes("p=quarantine"))
     );
     resultsHTML += `<div class="box">DMARC: <span class="${dmarcPass?'pass':'fail'}">${dmarcPass?'PASS':'FAIL'}</span><br>
       <small>Expected host: _dmarc.${domain}</small><br>
@@ -153,7 +156,7 @@ Please remove leading/trailing spaces.`);
     if(!dmarcPass){
       copyable.push(`DMARC TXT Record:
 Host: _dmarc.${domain}
-Value: v=DMARC1; p=quarantine;`);
+Value: v=DMARC1; p=none;`);
     }
 
     // 4. DKIM - checks CNAME values point to correct mandrillapp hosts
