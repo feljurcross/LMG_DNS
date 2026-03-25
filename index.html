@@ -57,7 +57,7 @@ pre{
 </head>
 
 <body>
-<h2 style="text-align:center;">DNS Checker Tool
+## DNS Checker Tool
 
 <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:20px;">
   <input id="domain" placeholder="Enter domain" style="width:300px; padding:8px;">
@@ -113,10 +113,10 @@ v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all
 (Note: Add to existing SPF, do NOT create new if exists)`);
     }
 
-    // Mandrill
-    const mandrillRecords = txtRecords.filter(r => r.includes("mandrill_verify"));
-    if(mandrillRecords.length>0){
-      const spacingIssue = mandrillRecords.some(r => r.startsWith(" ") || r.endsWith(" "));
+    // Mandrill - UPDATED: must start with mandrill_verify and have no leading/trailing spaces
+    const mandrillRecords = txtRecords.filter(r => r.startsWith("mandrill_verify"));
+    if(mandrillRecords.length > 0){
+      const spacingIssue = mandrillRecords.some(r => r !== r.trim());
       if(spacingIssue){
         resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Extra Spaces)</span></div>`;
         nonCopyable.push(`Mandrill TXT Record has extra spaces:
