@@ -3,60 +3,52 @@
 <head>
 <title>DNS Checker Tool</title>
 <style>
-body{
+body {
   font-family: Arial;
-  margin:40px;
+  margin: 40px;
 }
-
-.pass{
-  color:green;
-  font-weight:bold;
+.pass {
+  color: green;
+  font-weight: bold;
 }
-
-.fail{
-  color:red;
-  font-weight:bold;
+.fail {
+  color: red;
+  font-weight: bold;
 }
-
-.box{
-  border:1px solid #ccc;
-  padding:15px;
-  margin-top:15px;
-  border-radius:6px;
+.box {
+  border: 1px solid #ccc;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 6px;
 }
-
-.copy{
-  cursor:pointer;
-  padding:5px 10px;
-  margin-top:5px;
-  background:#0073e6;
-  color:#fff;
-  border:none;
-  border-radius:4px;
+.copy {
+  cursor: pointer;
+  padding: 5px 10px;
+  margin-top: 5px;
+  background: #0073e6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
 }
-
-.instructions{
-  border:1px solid #ccc;
-  background:#f0f8ff;
-  padding:15px;
-  margin-top:30px;
-  border-radius:6px;
+.instructions {
+  border: 1px solid #ccc;
+  background: #f0f8ff;
+  padding: 15px;
+  margin-top: 30px;
+  border-radius: 6px;
 }
-
-.instructions h3{
-  margin-top:0;
+.instructions h3 {
+  margin-top: 0;
 }
-
-pre{
-  background:#eee;
-  padding:10px;
-  border-radius:4px;
+pre {
+  background: #eee;
+  padding: 10px;
+  border-radius: 4px;
   white-space: pre-wrap;
 }
-
-.container{
-  max-width:800px;
-  margin:0 auto;
+.container {
+  max-width: 800px;
+  margin: 0 auto;
 }
 </style>
 </head>
@@ -78,7 +70,7 @@ pre{
   </div>
 
   <div id="instructions-copyable" class="instructions" style="display:none;">
-    ### DNS Records Instructions (Copy & Apply)
+    ### DNS Records Instructions (Copy &amp; Apply)
     <pre id="copyableInstructions"></pre>
     <button class="copy" onclick="copyInstructions()">Copy All Instructions</button>
   </div>
@@ -92,10 +84,10 @@ pre{
 
 <script>
 async function fetchDNS(name, type){
-  const url = `https://cloudflare-dns.com/dns-query?name=${name}&type=${type}`;
-  const res = await fetch(url, { headers: { 'Accept': 'application/dns-json' } });
+  const url = "https://cloudflare-dns.com/dns-query?name=" + name + "&type=" + type;
+  const res = await fetch(url, { headers: { "Accept": "application/dns-json" } });
   const data = await res.json();
-  return data.Answer?.map(r => r.data.replace(/"/g,'') ) || [];
+  return data.Answer ? data.Answer.map(r => r.data.replace(/"/g, "")): [];
 }
 
 async function checkDNS(){
@@ -107,106 +99,78 @@ async function checkDNS(){
   const nonCopyable = [];
 
   try{
-    // --- TXT Records (SPF + Mandrill) ---
     const txtRecords = await fetchDNS(domain, "TXT");
 
-    // 1. SPF - checks for both required includes, shows raw value
+    // 1. SPF
     const spfRecord = txtRecords.find(r =>
       r.includes("include:sendgrid.net") && r.includes("include:spf.mandrillapp.com")
     );
     const spfPass = !!spfRecord;
-    const spfRaw = txtRecords.find(r => r.includes("spf1")) || 'No SPF record found';
-    resultsHTML += `<div class="box">SPF: <span class="${spfPass?'pass':'fail'}">${spfPass?'PASS':'FAIL'}</span><br>
-      <small>Raw value: ${spfRaw}</small></div>`;
+    const spfRaw = txtRecords.find(r => r.includes("spf1")) || "No SPF record found";
+    resultsHTML += "<div class='box'>SPF: <span class='" + (spfPass?"pass":"fail") + "'>" + (spfPass?"PASS":"FAIL") + "</span><br><small>Raw value: " + spfRaw + "</small></div>";
     if(!spfPass){
-      copyable.push(`SPF TXT Record:
-Please include in your SPF:
-v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all
-(Note: Add to existing SPF, do NOT create new if exists)`);
+      copyable.push("SPF TXT Record:\nPlease include in your SPF:\nv=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all\n(Note: Add to existing SPF, do NOT create new if exists)");
     }
 
-    // 2. Mandrill - root @ only, must start with mandrill_verify, no trailing space
+    // 2. Mandrill
     const mandrillRecords = txtRecords.filter(r => r.startsWith("mandrill_verify"));
     if(mandrillRecords.length > 0){
       const spacingIssue = mandrillRecords.some(r => r !== r.trim());
       if(spacingIssue){
-        resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Extra Spaces)</span><br>
-          <small>Raw value: ${mandrillRecords.join(', ')}</small></div>`;
-        nonCopyable.push(`Mandrill TXT Record has extra spaces:
-Raw value: "${mandrillRecords.join(', ')}"
-Please remove leading/trailing spaces.`);
+        resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>INVALID (Extra Spaces)</span><br><small>Raw value: " + mandrillRecords.join(", ") + "</small></div>";
+        nonCopyable.push("Mandrill TXT Record has extra spaces:\nRaw value: \"" + mandrillRecords.join(", ") + "\"\nPlease remove leading/trailing spaces.");
       } else {
-        resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span><br>
-          <small>Raw value: ${mandrillRecords.join(', ')}</small></div>`;
+        resultsHTML += "<div class='box'>Mandrill Verify: <span class='pass'>PASS</span><br><small>Raw value: " + mandrillRecords.join(", ") + "</small></div>";
       }
     } else {
-      resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span><br>
-        <small>No mandrill_verify TXT record found on root domain.</small></div>`;
-      nonCopyable.push(`No Mandrill TXT record found. Contact MyCRM Technology Support.`);
+      resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>FAIL</span><br><small>No mandrill_verify TXT record found on root domain.</small></div>";
+      nonCopyable.push("No Mandrill TXT record found. Contact MyCRM Technology Support.");
     }
 
-    // 3. DMARC - UPDATED: accepts both p=none and p=quarantine
-    const dmarcRecords = await fetchDNS(`_dmarc.${domain}`,"TXT");
+    // 3. DMARC
+    const dmarcRecords = await fetchDNS("_dmarc." + domain, "TXT");
     const dmarcPass = dmarcRecords.some(r =>
       r.includes("v=DMARC1") && (r.includes("p=none") || r.includes("p=quarantine"))
     );
-    resultsHTML += `<div class="box">DMARC: <span class="${dmarcPass?'pass':'fail'}">${dmarcPass?'PASS':'FAIL'}</span><br>
-      <small>Expected host: _dmarc.${domain}</small><br>
-      <small>Raw value: ${dmarcRecords.join(', ') || 'No record found'}</small></div>`;
+    resultsHTML += "<div class='box'>DMARC: <span class='" + (dmarcPass?"pass":"fail") + "'>" + (dmarcPass?"PASS":"FAIL") + "</span><br><small>Expected host: _dmarc." + domain + "</small><br><small>Raw value: " + (dmarcRecords.join(", ") || "No record found") + "</small></div>";
     if(!dmarcPass){
-      copyable.push(`DMARC TXT Record:
-Host: _dmarc.${domain}
-Value: v=DMARC1; p=none;`);
+      copyable.push("DMARC TXT Record:\nHost: _dmarc." + domain + "\nValue: v=DMARC1; p=none;");
     }
 
-    // 4. DKIM - checks CNAME values point to correct mandrillapp hosts
-    const dkim1Records = await fetchDNS(`mte1._domainkey.${domain}`, "CNAME");
-    const dkim2Records = await fetchDNS(`mte2._domainkey.${domain}`, "CNAME");
-
-    const normalizeSingle = arr => arr.map(r => r.replace(/\.$/,'').toLowerCase().trim());
+    // 4. DKIM
+    const dkim1Records = await fetchDNS("mte1._domainkey." + domain, "CNAME");
+    const dkim2Records = await fetchDNS("mte2._domainkey." + domain, "CNAME");
+    const normalizeSingle = arr => arr.map(r => r.replace(/\.$/, "").toLowerCase().trim());
     const dkim1Pass = normalizeSingle(dkim1Records).includes("dkim1.mandrillapp.com");
     const dkim2Pass = normalizeSingle(dkim2Records).includes("dkim2.mandrillapp.com");
     const dkimPass = dkim1Pass && dkim2Pass;
-
-    resultsHTML += `<div class="box">DKIM: <span class="${dkimPass?'pass':'fail'}">${dkimPass?'PASS':'FAIL'}</span><br>
-      <small>mte1._domainkey.${domain} → ${dkim1Records.join(', ') || 'No record found'}</small><br>
-      <small>mte2._domainkey.${domain} → ${dkim2Records.join(', ') || 'No record found'}</small></div>`;
+    resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span><br><small>mte1._domainkey." + domain + " &rarr; " + (dkim1Records.join(", ") || "No record found") + "</small><br><small>mte2._domainkey." + domain + " &rarr; " + (dkim2Records.join(", ") || "No record found") + "</small></div>";
     if(!dkimPass){
-      copyable.push(`DKIM CNAME Records:
-mte1._domainkey.${domain} -> dkim1.mandrillapp.com
-mte2._domainkey.${domain} -> dkim2.mandrillapp.com`);
+      copyable.push("DKIM CNAME Records:\nmte1._domainkey." + domain + " -> dkim1.mandrillapp.com\nmte2._domainkey." + domain + " -> dkim2.mandrillapp.com");
     }
 
-    // 5. CustomerIO / SendGrid - check if all 3 CNAME records exist, no duplicates
-    const cioRecords = await fetchDNS(`customerio.${domain}`, "CNAME");
-    const sg1Records = await fetchDNS(`sg1._domainkey.${domain}`, "CNAME");
-    const sg12Records = await fetchDNS(`sg12._domainkey.${domain}`, "CNAME");
-
+    // 5. CustomerIO / SendGrid
+    const cioRecords = await fetchDNS("customerio." + domain, "CNAME");
+    const sg1Records = await fetchDNS("sg1._domainkey." + domain, "CNAME");
+    const sg12Records = await fetchDNS("sg12._domainkey." + domain, "CNAME");
     const cioPass = [...new Set(cioRecords)].length > 0;
     const sg1Pass = [...new Set(sg1Records)].length > 0;
     const sg12Pass = [...new Set(sg12Records)].length > 0;
     const allCioPass = cioPass && sg1Pass && sg12Pass;
-
-    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass?'pass':'fail'}">${allCioPass?'PASS':'FAIL'}</span><br>
-      <small>customerio.${domain} → ${cioRecords.join(', ') || 'No record found'}</small><br>
-      <small>sg1._domainkey.${domain} → ${sg1Records.join(', ') || 'No record found'}</small><br>
-      <small>sg12._domainkey.${domain} → ${sg12Records.join(', ') || 'No record found'}</small></div>`;
+    resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span><br><small>customerio." + domain + " &rarr; " + (cioRecords.join(", ") || "No record found") + "</small><br><small>sg1._domainkey." + domain + " &rarr; " + (sg1Records.join(", ") || "No record found") + "</small><br><small>sg12._domainkey." + domain + " &rarr; " + (sg12Records.join(", ") || "No record found") + "</small></div>";
     if(!allCioPass){
-      nonCopyable.push(`CustomerIO / SendGrid - Missing CNAME records:
-customerio.${domain}: ${cioRecords.join(', ') || 'Missing'}
-sg1._domainkey.${domain}: ${sg1Records.join(', ') || 'Missing'}
-sg12._domainkey.${domain}: ${sg12Records.join(', ') || 'Missing'}`);
+      nonCopyable.push("CustomerIO / SendGrid - Missing CNAME records:\ncustomerio." + domain + ": " + (cioRecords.join(", ") || "Missing") + "\nsg1._domainkey." + domain + ": " + (sg1Records.join(", ") || "Missing") + "\nsg12._domainkey." + domain + ": " + (sg12Records.join(", ") || "Missing"));
     }
 
   } catch(e){
-    resultsHTML += `<div class="box">ERROR: Could not check DNS. Try again later.</div>`;
+    resultsHTML += "<div class='box'>ERROR: Could not check DNS. Try again later.</div>";
   }
 
   document.getElementById("results").innerHTML = resultsHTML;
   document.getElementById("copyableInstructions").innerText = copyable.join("\n\n");
-  document.getElementById("instructions-copyable").style.display = copyable.length>0 ? "block" : "none";
+  document.getElementById("instructions-copyable").style.display = copyable.length > 0 ? "block" : "none";
   document.getElementById("nonCopyableInstructions").innerText = nonCopyable.join("\n\n");
-  document.getElementById("instructions-noncopyable").style.display = nonCopyable.length>0 ? "block" : "none";
+  document.getElementById("instructions-noncopyable").style.display = nonCopyable.length > 0 ? "block" : "none";
 }
 
 function copyInstructions(){
