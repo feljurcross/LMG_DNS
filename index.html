@@ -20,6 +20,7 @@ body {
   padding: 15px;
   margin-top: 15px;
   border-radius: 6px;
+  text-align: center;
 }
 .copy {
   cursor: pointer;
@@ -56,7 +57,7 @@ pre {
 <body>
 <div class="container">
 
-  ## DNS Checker Tool
+  <p style="text-align:center; font-size:24px; font-weight:bold;">DNS Checker Tool</p>
 
   <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:20px;">
     <input id="domain" placeholder="Enter domain" style="width:300px; padding:8px;">
@@ -70,13 +71,13 @@ pre {
   </div>
 
   <div id="instructions-copyable" class="instructions" style="display:none;">
-    ### DNS Records Instructions (Copy &amp; Apply)
+    <p style="font-size:16px; font-weight:bold; margin-top:0;">DNS Records Instructions (Copy &amp; Apply)</p>
     <pre id="copyableInstructions"></pre>
     <button class="copy" onclick="copyInstructions()">Copy All Instructions</button>
   </div>
 
   <div id="instructions-noncopyable" class="instructions" style="display:none;">
-    ### Instructions (Requires MyCRM Technology Support)
+    <p style="font-size:16px; font-weight:bold; margin-top:0;">Instructions (Requires MyCRM Technology Support)</p>
     <pre id="nonCopyableInstructions"></pre>
   </div>
 
