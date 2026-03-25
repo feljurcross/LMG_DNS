@@ -57,9 +57,9 @@ pre{
 </head>
 
 <body>
-## DNS Checker Tool
+<h2 style="text-align:center;">DNS Checker Tool
 
-<div style="text-align:center; margin-bottom:20px;">
+<div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:20px;">
   <input id="domain" placeholder="Enter domain" style="width:300px; padding:8px;">
   <button onclick="checkDNS()" style="padding:8px 12px;">Check DNS</button>
 </div>
@@ -101,7 +101,7 @@ async function checkDNS(){
     // --- TXT Records (SPF + Mandrill) ---
     const txtRecords = await fetchDNS(domain, "TXT");
 
-    // SPF - UPDATED: checks for both required includes
+    // SPF - checks for both required includes
     const spfPass = txtRecords.some(r =>
       r.includes("include:sendgrid.net") && r.includes("include:spf.mandrillapp.com")
     );
