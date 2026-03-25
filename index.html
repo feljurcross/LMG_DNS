@@ -128,13 +128,13 @@ v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all
       const spacingIssue = mandrillRecords.some(r => r !== r.trim());
       if(spacingIssue){
         resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Extra Spaces)</span><br>
-          <small>Raw value: `${mandrillRecords.join(', ')}`</small></div>`;
+          <small>Raw value: ${mandrillRecords.join(', ')}</small></div>`;
         nonCopyable.push(`Mandrill TXT Record has extra spaces:
 Raw value: "${mandrillRecords.join(', ')}"
 Please remove leading/trailing spaces.`);
       } else {
         resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span><br>
-          <small>Raw value: `${mandrillRecords.join(', ')}`</small></div>`;
+          <small>Raw value: ${mandrillRecords.join(', ')}</small></div>`;
       }
     } else {
       resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span><br>
@@ -148,8 +148,8 @@ Please remove leading/trailing spaces.`);
       r.includes("v=DMARC1") && r.includes("p=quarantine")
     );
     resultsHTML += `<div class="box">DMARC: <span class="${dmarcPass?'pass':'fail'}">${dmarcPass?'PASS':'FAIL'}</span><br>
-      <small>Expected host: `_dmarc.${domain}`</small><br>
-      <small>Raw value: `${dmarcRecords.join(', ') || 'No record found'}`</small></div>`;
+      <small>Expected host: _dmarc.${domain}</small><br>
+      <small>Raw value: ${dmarcRecords.join(', ') || 'No record found'}</small></div>`;
     if(!dmarcPass){
       copyable.push(`DMARC TXT Record:
 Host: _dmarc.${domain}
@@ -166,15 +166,15 @@ Value: v=DMARC1; p=quarantine;`);
     const dkimPass = dkim1Pass && dkim2Pass;
 
     resultsHTML += `<div class="box">DKIM: <span class="${dkimPass?'pass':'fail'}">${dkimPass?'PASS':'FAIL'}</span><br>
-      <small>mte1._domainkey.${domain} → `${dkim1Records.join(', ') || 'No record found'}`</small><br>
-      <small>mte2._domainkey.${domain} → `${dkim2Records.join(', ') || 'No record found'}`</small></div>`;
+      <small>mte1._domainkey.${domain} → ${dkim1Records.join(', ') || 'No record found'}</small><br>
+      <small>mte2._domainkey.${domain} → ${dkim2Records.join(', ') || 'No record found'}</small></div>`;
     if(!dkimPass){
       copyable.push(`DKIM CNAME Records:
 mte1._domainkey.${domain} -> dkim1.mandrillapp.com
 mte2._domainkey.${domain} -> dkim2.mandrillapp.com`);
     }
 
-    // 5. CustomerIO / SendGrid - just check if all 3 CNAME records exist, no duplicates
+    // 5. CustomerIO / SendGrid - check if all 3 CNAME records exist, no duplicates
     const cioRecords = await fetchDNS(`customerio.${domain}`, "CNAME");
     const sg1Records = await fetchDNS(`sg1._domainkey.${domain}`, "CNAME");
     const sg12Records = await fetchDNS(`sg12._domainkey.${domain}`, "CNAME");
@@ -185,9 +185,9 @@ mte2._domainkey.${domain} -> dkim2.mandrillapp.com`);
     const allCioPass = cioPass && sg1Pass && sg12Pass;
 
     resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass?'pass':'fail'}">${allCioPass?'PASS':'FAIL'}</span><br>
-      <small>customerio.${domain} → `${cioRecords.join(', ') || 'No record found'}`</small><br>
-      <small>sg1._domainkey.${domain} → `${sg1Records.join(', ') || 'No record found'}`</small><br>
-      <small>sg12._domainkey.${domain} → `${sg12Records.join(', ') || 'No record found'}`</small></div>`;
+      <small>customerio.${domain} → ${cioRecords.join(', ') || 'No record found'}</small><br>
+      <small>sg1._domainkey.${domain} → ${sg1Records.join(', ') || 'No record found'}</small><br>
+      <small>sg12._domainkey.${domain} → ${sg12Records.join(', ') || 'No record found'}</small></div>`;
     if(!allCioPass){
       nonCopyable.push(`CustomerIO / SendGrid - Missing CNAME records:
 customerio.${domain}: ${cioRecords.join(', ') || 'Missing'}
