@@ -36,7 +36,7 @@ body{
 }
 
 .instructions{
-  border:1px solid ;
+  border:1px solid;
   background:#f0f8ff;
   padding:15px;
   margin-top:30px;
@@ -113,20 +113,23 @@ v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all
 (Note: Add to existing SPF, do NOT create new if exists)`);
     }
 
-    // Mandrill - UPDATED: must start with mandrill_verify and have no leading/trailing spaces
+    // Mandrill - checks root @ only, must start with mandrill_verify, no trailing space
     const mandrillRecords = txtRecords.filter(r => r.startsWith("mandrill_verify"));
     if(mandrillRecords.length > 0){
       const spacingIssue = mandrillRecords.some(r => r !== r.trim());
       if(spacingIssue){
-        resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Extra Spaces)</span></div>`;
+        resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">INVALID (Extra Spaces)</span><br>
+          <small>Raw value: `${mandrillRecords.join(', ')}`</small></div>`;
         nonCopyable.push(`Mandrill TXT Record has extra spaces:
-Original value(s): "${mandrillRecords.join(', ')}"
+Raw value: "${mandrillRecords.join(', ')}"
 Please remove leading/trailing spaces.`);
       } else {
-        resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span></div>`;
+        resultsHTML += `<div class="box">Mandrill Verify: <span class="pass">PASS</span><br>
+          <small>Raw value: `${mandrillRecords.join(', ')}`</small></div>`;
       }
     } else {
-      resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span></div>`;
+      resultsHTML += `<div class="box">Mandrill Verify: <span class="fail">FAIL</span><br>
+        <small>No mandrill_verify TXT record found on root domain.</small></div>`;
       nonCopyable.push(`No Mandrill TXT record found. Contact MyCRM Technology Support.`);
     }
 
@@ -153,21 +156,32 @@ sg1._domainkey: ${sg1Records.join(', ')}
 sg12._domainkey: ${sg12Records.join(', ')}`);
     }
 
-    // DMARC
+    // DMARC - UPDATED: must have v=DMARC1 and p=quarantine
     const dmarcRecords = await fetchDNS(`_dmarc.${domain}`,"TXT");
-    const dmarcPass = dmarcRecords.some(r => r.includes("DMARC1"));
-    resultsHTML += `<div class="box">DMARC: <span class="${dmarcPass?'pass':'fail'}">${dmarcPass?'PASS':'FAIL'}</span></div>`;
+    const dmarcPass = dmarcRecords.some(r =>
+      r.includes("v=DMARC1") && r.includes("p=quarantine")
+    );
+    resultsHTML += `<div class="box">DMARC: <span class="${dmarcPass?'pass':'fail'}">${dmarcPass?'PASS':'FAIL'}</span><br>
+      <small>Expected host: `_dmarc.${domain}`</small><br>
+      <small>Raw value: `${dmarcRecords.join(', ') || 'No record found'}`</small></div>`;
     if(!dmarcPass){
       copyable.push(`DMARC TXT Record:
-Host: _dmarc
-Value: v=DMARC1; p=none;`);
+Host: _dmarc.${domain}
+Value: v=DMARC1; p=quarantine;`);
     }
 
-    // DKIM
-    const dkim1 = (await fetchDNS(`mte1._domainkey.${domain}`, "CNAME")).length>0;
-    const dkim2 = (await fetchDNS(`mte2._domainkey.${domain}`, "CNAME")).length>0;
-    const dkimPass = dkim1 && dkim2;
-    resultsHTML += `<div class="box">DKIM: <span class="${dkimPass?'pass':'fail'}">${dkimPass?'PASS':'FAIL'}</span></div>`;
+    // DKIM - UPDATED: checks CNAME values point to correct mandrillapp hosts
+    const dkim1Records = await fetchDNS(`mte1._domainkey.${domain}`, "CNAME");
+    const dkim2Records = await fetchDNS(`mte2._domainkey.${domain}`, "CNAME");
+
+    const normalizeSingle = arr => arr.map(r => r.replace(/\.$/,'').toLowerCase().trim());
+    const dkim1Pass = normalizeSingle(dkim1Records).includes("dkim1.mandrillapp.com");
+    const dkim2Pass = normalizeSingle(dkim2Records).includes("dkim2.mandrillapp.com");
+    const dkimPass = dkim1Pass && dkim2Pass;
+
+    resultsHTML += `<div class="box">DKIM: <span class="${dkimPass?'pass':'fail'}">${dkimPass?'PASS':'FAIL'}</span><br>
+      <small>mte1._domainkey.${domain} → `${dkim1Records.join(', ') || 'No record found'}`</small><br>
+      <small>mte2._domainkey.${domain} → `${dkim2Records.join(', ') || 'No record found'}`</small></div>`;
     if(!dkimPass){
       copyable.push(`DKIM CNAME Records:
 mte1._domainkey.${domain} -> dkim1.mandrillapp.com
