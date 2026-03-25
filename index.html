@@ -36,7 +36,7 @@ body{
 }
 
 .instructions{
-  border:1px solid;
+  border:1px solid #ccc;
   background:#f0f8ff;
   padding:15px;
   margin-top:30px;
@@ -53,32 +53,41 @@ pre{
   border-radius:4px;
   white-space: pre-wrap;
 }
+
+.container{
+  max-width:800px;
+  margin:0 auto;
+}
 </style>
 </head>
 
 <body>
-## DNS Checker Tool
+<div class="container">
 
-<div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:20px;">
-  <input id="domain" placeholder="Enter domain" style="width:300px; padding:8px;">
-  <button onclick="checkDNS()" style="padding:8px 12px;">Check DNS</button>
-</div>
+  <h2 style="text-align:center;">DNS Checker Tool
 
-<div id="results"></div>
+  <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:20px;">
+    <input id="domain" placeholder="Enter domain" style="width:300px; padding:8px;">
+    <button onclick="checkDNS()" style="padding:8px 12px;">Check DNS</button>
+  </div>
 
-<div style="margin-top:40px; font-size:14px; color:#555; text-align:center;">
-  Powered by MyCRM Technology Support
-</div>
+  <div id="results"></div>
 
-<div id="instructions-copyable" class="instructions" style="display:none;">
-  ### DNS Records Instructions (Copy & Apply)
-  <pre id="copyableInstructions"></pre>
-  <button class="copy" onclick="copyInstructions()">Copy All Instructions</button>
-</div>
+  <div style="margin-top:40px; font-size:14px; color:#555; text-align:center;">
+    Powered by MyCRM Technology Support
+  </div>
 
-<div id="instructions-noncopyable" class="instructions" style="display:none;">
-  ### Instructions (Requires MyCRM Technology Support)
-  <pre id="nonCopyableInstructions"></pre>
+  <div id="instructions-copyable" class="instructions" style="display:none;">
+    ### DNS Records Instructions (Copy & Apply)
+    <pre id="copyableInstructions"></pre>
+    <button class="copy" onclick="copyInstructions()">Copy All Instructions</button>
+  </div>
+
+  <div id="instructions-noncopyable" class="instructions" style="display:none;">
+    ### Instructions (Requires MyCRM Technology Support)
+    <pre id="nonCopyableInstructions"></pre>
+  </div>
+
 </div>
 
 <script>
@@ -101,7 +110,7 @@ async function checkDNS(){
     // --- TXT Records (SPF + Mandrill) ---
     const txtRecords = await fetchDNS(domain, "TXT");
 
-    // SPF - checks for both required includes
+    // 1. SPF - checks for both required includes
     const spfPass = txtRecords.some(r =>
       r.includes("include:sendgrid.net") && r.includes("include:spf.mandrillapp.com")
     );
@@ -113,7 +122,7 @@ v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all
 (Note: Add to existing SPF, do NOT create new if exists)`);
     }
 
-    // Mandrill - checks root @ only, must start with mandrill_verify, no trailing space
+    // 2. Mandrill - root @ only, must start with mandrill_verify, no trailing space
     const mandrillRecords = txtRecords.filter(r => r.startsWith("mandrill_verify"));
     if(mandrillRecords.length > 0){
       const spacingIssue = mandrillRecords.some(r => r !== r.trim());
@@ -133,30 +142,7 @@ Please remove leading/trailing spaces.`);
       nonCopyable.push(`No Mandrill TXT record found. Contact MyCRM Technology Support.`);
     }
 
-    // CustomerIO / SendGrid
-    const cioRecords = await fetchDNS(`customerio.${domain}`, "CNAME");
-    const sg1Records = await fetchDNS(`sg1._domainkey.${domain}`, "CNAME");
-    const sg12Records = await fetchDNS(`sg12._domainkey.${domain}`, "CNAME");
-
-    const normalize = arr => arr.map(r => r.replace(/\.$/,'').toLowerCase().trim());
-    const expectedCIO = `customerio.${domain}`.toLowerCase();
-    const expectedSG1 = `sg1._domainkey.${domain}`.toLowerCase();
-    const expectedSG12 = `sg12._domainkey.${domain}`.toLowerCase();
-
-    const cioPass = normalize(cioRecords).includes(expectedCIO);
-    const sg1Pass = normalize(sg1Records).includes(expectedSG1);
-    const sg12Pass = normalize(sg12Records).includes(expectedSG12);
-    const allCioPass = cioPass && sg1Pass && sg12Pass;
-
-    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass?'pass':'fail'}">${allCioPass?'PASS':'FAIL'}</span></div>`;
-    if(!allCioPass){
-      nonCopyable.push(`CustomerIO / SendGrid Missing/Incorrect:
-customerio: ${cioRecords.join(', ')}
-sg1._domainkey: ${sg1Records.join(', ')}
-sg12._domainkey: ${sg12Records.join(', ')}`);
-    }
-
-    // DMARC - UPDATED: must have v=DMARC1 and p=quarantine
+    // 3. DMARC - must have v=DMARC1 and p=quarantine
     const dmarcRecords = await fetchDNS(`_dmarc.${domain}`,"TXT");
     const dmarcPass = dmarcRecords.some(r =>
       r.includes("v=DMARC1") && r.includes("p=quarantine")
@@ -170,7 +156,7 @@ Host: _dmarc.${domain}
 Value: v=DMARC1; p=quarantine;`);
     }
 
-    // DKIM - UPDATED: checks CNAME values point to correct mandrillapp hosts
+    // 4. DKIM - checks CNAME values point to correct mandrillapp hosts
     const dkim1Records = await fetchDNS(`mte1._domainkey.${domain}`, "CNAME");
     const dkim2Records = await fetchDNS(`mte2._domainkey.${domain}`, "CNAME");
 
@@ -186,6 +172,27 @@ Value: v=DMARC1; p=quarantine;`);
       copyable.push(`DKIM CNAME Records:
 mte1._domainkey.${domain} -> dkim1.mandrillapp.com
 mte2._domainkey.${domain} -> dkim2.mandrillapp.com`);
+    }
+
+    // 5. CustomerIO / SendGrid - just check if all 3 CNAME records exist, no duplicates
+    const cioRecords = await fetchDNS(`customerio.${domain}`, "CNAME");
+    const sg1Records = await fetchDNS(`sg1._domainkey.${domain}`, "CNAME");
+    const sg12Records = await fetchDNS(`sg12._domainkey.${domain}`, "CNAME");
+
+    const cioPass = [...new Set(cioRecords)].length > 0;
+    const sg1Pass = [...new Set(sg1Records)].length > 0;
+    const sg12Pass = [...new Set(sg12Records)].length > 0;
+    const allCioPass = cioPass && sg1Pass && sg12Pass;
+
+    resultsHTML += `<div class="box">CustomerIO/SendGrid: <span class="${allCioPass?'pass':'fail'}">${allCioPass?'PASS':'FAIL'}</span><br>
+      <small>customerio.${domain} → `${cioRecords.join(', ') || 'No record found'}`</small><br>
+      <small>sg1._domainkey.${domain} → `${sg1Records.join(', ') || 'No record found'}`</small><br>
+      <small>sg12._domainkey.${domain} → `${sg12Records.join(', ') || 'No record found'}`</small></div>`;
+    if(!allCioPass){
+      nonCopyable.push(`CustomerIO / SendGrid - Missing CNAME records:
+customerio.${domain}: ${cioRecords.join(', ') || 'Missing'}
+sg1._domainkey.${domain}: ${sg1Records.join(', ') || 'Missing'}
+sg12._domainkey.${domain}: ${sg12Records.join(', ') || 'Missing'}`);
     }
 
   } catch(e){
