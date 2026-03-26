@@ -70,13 +70,12 @@ Powered by MyCRM Technology Support
 <button class="copy" onclick="copyInstructions()">Copy All Instructions</button>
 </div>
 <div id="instructions-noncopyable" class="instructions" style="display:none;">
-<p style="font-size:16px; font-weight:bold; margin-top:0;">Instructions (Requires MyCRM Technology Support)</p>
+<p style="font-size:16px; font-weight:bold; margin-top:0;">Next Steps: (Requires access to Mandrill/SendGrid or assistance from MyCRM Technology Support)</p>
 <pre id="nonCopyableInstructions"></pre>
 </div>
 </div>
 <script>
 async function fetchDNS(name, type){
-// Cloudflare DNS over HTTPS API
 const url = "https://cloudflare-dns.com/dns-query?name=" + name + "&type=" + type;
 const res = await fetch(url, { headers: { "Accept": "application/dns-json" } });
 const data = await res.json();
@@ -105,14 +104,14 @@ const mandrillRecords = txtRecords.filter(r => r.startsWith("mandrill_verify"));
 if(mandrillRecords.length > 0){
 const spacingIssue = mandrillRecords.some(r => r !== r.trim());
 if(spacingIssue){
-resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>INVALID (Extra Spaces)</span><br><small>Raw value: " + mandrillRecords.join(", ") + "</small></div>";
-nonCopyable.push("Mandrill TXT Record has extra spaces:\nRaw value: " + mandrillRecords.join(", ") + "\nPlease remove leading/trailing spaces.");
+resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>INVALID</span><br><small>Space found in record.</small><br><small>Raw value: " + mandrillRecords.join(", ") + "</small></div>";
+nonCopyable.push("Mandrill Verify:\nSpace found in record.\nRaw value: " + mandrillRecords.join(", ") + "\nPlease remove leading/trailing spaces.");
 } else {
 resultsHTML += "<div class='box'>Mandrill Verify: <span class='pass'>PASS</span><br><small>Raw value: " + mandrillRecords.join(", ") + "</small></div>";
 }
 } else {
-resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>FAIL</span><br><small>No mandrill_verify TXT record found on root domain.</small></div>";
-nonCopyable.push("No Mandrill TXT record found. Contact MyCRM Technology Support.");
+resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>FAIL</span><br><small>No TXT record found.</small></div>";
+nonCopyable.push("Mandrill Verify:\nNo TXT record found.");
 }
 // 3. DMARC - must have v=DMARC1 and p=none or p=quarantine
 const dmarcRecords = await fetchDNS("_dmarc." + domain, "TXT");
@@ -134,17 +133,39 @@ resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail")
 if(!dkimPass){
 copyable.push("DKIM CNAME Records:\nmte1._domainkey." + domain + " -> dkim1.mandrillapp.com\nmte2._domainkey." + domain + " -> dkim2.mandrillapp.com");
 }
-// 5. CustomerIO/SendGrid - all 3 CNAMEs must exist
+// 5. CustomerIO/SendGrid - all 3 CNAMEs must exist, no duplicates, no spaces
 const cioRecords = await fetchDNS("customerio." + domain, "CNAME");
 const sg1Records = await fetchDNS("sg1._domainkey." + domain, "CNAME");
 const sg12Records = await fetchDNS("sg12._domainkey." + domain, "CNAME");
-const cioPass = [...new Set(cioRecords)].length > 0;
-const sg1Pass = [...new Set(sg1Records)].length > 0;
-const sg12Pass = [...new Set(sg12Records)].length > 0;
+const hasDuplicateCio = cioRecords.length !== new Set(cioRecords).size;
+const hasDuplicateSg1 = sg1Records.length !== new Set(sg1Records).size;
+const hasDuplicateSg12 = sg12Records.length !== new Set(sg12Records).size;
+const hasSpaceCio = cioRecords.some(r => r !== r.trim());
+const hasSpaceSg1 = sg1Records.some(r => r !== r.trim());
+const hasSpaceSg12 = sg12Records.some(r => r !== r.trim());
+const cioPass = cioRecords.length > 0 && !hasDuplicateCio && !hasSpaceCio;
+const sg1Pass = sg1Records.length > 0 && !hasDuplicateSg1 && !hasSpaceSg1;
+const sg12Pass = sg12Records.length > 0 && !hasDuplicateSg12 && !hasSpaceSg12;
 const allCioPass = cioPass && sg1Pass && sg12Pass;
 resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span><br><small>customerio." + domain + " -> " + (cioRecords.join(", ") || "No record found") + "</small><br><small>sg1._domainkey." + domain + " -> " + (sg1Records.join(", ") || "No record found") + "</small><br><small>sg12._domainkey." + domain + " -> " + (sg12Records.join(", ") || "No record found") + "</small></div>";
 if(!allCioPass){
-nonCopyable.push("CustomerIO / SendGrid - Missing CNAME records:\ncustomerio." + domain + ": " + (cioRecords.join(", ") || "Missing") + "\nsg1._domainkey." + domain + ": " + (sg1Records.join(", ") || "Missing") + "\nsg12._domainkey." + domain + ": " + (sg12Records.join(", ") || "Missing"));
+let cioIssue = "";
+if(cioRecords.length === 0) cioIssue = "No CNAME record found.";
+else if(hasDuplicateCio) cioIssue = "Duplicate records found.";
+else if(hasSpaceCio) cioIssue = "Space found in record.";
+let sg1Issue = "";
+if(sg1Records.length === 0) sg1Issue = "No CNAME record found.";
+else if(hasDuplicateSg1) sg1Issue = "Duplicate records found.";
+else if(hasSpaceSg1) sg1Issue = "Space found in record.";
+let sg12Issue = "";
+if(sg12Records.length === 0) sg12Issue = "No CNAME record found.";
+else if(hasDuplicateSg12) sg12Issue = "Duplicate records found.";
+else if(hasSpaceSg12) sg12Issue = "Space found in record.";
+let msg = "CustomerIO / SendGrid:\n";
+if(cioIssue) msg += "customerio." + domain + ": " + cioIssue + "\n";
+if(sg1Issue) msg += "sg1._domainkey." + domain + ": " + sg1Issue + "\n";
+if(sg12Issue) msg += "sg12._domainkey." + domain + ": " + sg12Issue;
+nonCopyable.push(msg.trim());
 }
 } catch(e){
 resultsHTML += "<div class='box'>ERROR: Could not check DNS. Try again later.</div>";
