@@ -226,7 +226,14 @@ document.getElementById("instructions-noncopyable").style.display = nonCopyable.
 function copyInstructions(){
 const text = document.getElementById("copyableInstructions").innerText;
 navigator.clipboard.writeText(text);
-alert("All copyable instructions copied!");
+const btn = document.querySelector(".copy");
+const original = btn.innerText;
+btn.innerText = "Copied!";
+btn.style.background = "#28a745";
+setTimeout(() => {
+btn.innerText = original;
+btn.style.background = "#007bff";
+}, 2000);
 }
 </script>
 </body>
