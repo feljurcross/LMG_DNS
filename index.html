@@ -15,6 +15,9 @@ font-weight: bold;
 color: red;
 font-weight: bold;
 }
+.no-record {
+color: red;
+}
 .box {
 border: 1px solid #ccc;
 padding: 15px;
@@ -82,6 +85,10 @@ const data = await res.json();
 return data.Answer ? data.Answer.map(r => r.data.replace(/"/g, "")) : [];
 }
 
+function noRecord(){
+return "<span class='no-record'>No record found</span>";
+}
+
 async function checkDNS(){
 const domain = document.getElementById("domain").value.trim();
 if(!domain) return alert("Please enter a domain");
@@ -97,7 +104,7 @@ const spfRecord = txtRecords.find(r =>
 r.includes("include:sendgrid.net") && r.includes("include:spf.mandrillapp.com")
 );
 const spfPass = !!spfRecord;
-const spfRaw = txtRecords.find(r => r.includes("spf1")) || "No SPF record found";
+const spfRaw = txtRecords.find(r => r.includes("spf1")) || noRecord();
 resultsHTML += "<div class='box'>SPF: <span class='" + (spfPass?"pass":"fail") + "'>" + (spfPass?"PASS":"FAIL") + "</span><br><small>Raw value: " + spfRaw + "</small></div>";
 if(!spfPass){
 copyable.push(
@@ -120,7 +127,7 @@ nonCopyable.push("Mandrill Verify:\nSpace found in record.\nRaw value: " + mandr
 resultsHTML += "<div class='box'>Mandrill Verify: <span class='pass'>PASS</span><br><small>Raw value: " + mandrillRecords.join(", ") + "</small></div>";
 }
 } else {
-resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>FAIL</span><br><small>No TXT record found.</small></div>";
+resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>FAIL</span><br><small>" + noRecord() + "</small></div>";
 nonCopyable.push("Mandrill Verify:\nNo TXT record found.\nPlease log in to Mandrill to retrieve the verification TXT record for this domain.");
 }
 
@@ -129,7 +136,7 @@ const dmarcRecords = await fetchDNS("_dmarc." + domain, "TXT");
 const dmarcPass = dmarcRecords.some(r =>
 r.includes("v=DMARC1") && (r.includes("p=none") || r.includes("p=quarantine"))
 );
-resultsHTML += "<div class='box'>DMARC: <span class='" + (dmarcPass?"pass":"fail") + "'>" + (dmarcPass?"PASS":"FAIL") + "</span><br><small>Expected host: _dmarc." + domain + "</small><br><small>Raw value: " + (dmarcRecords.join(", ") || "No record found") + "</small></div>";
+resultsHTML += "<div class='box'>DMARC: <span class='" + (dmarcPass?"pass":"fail") + "'>" + (dmarcPass?"PASS":"FAIL") + "</span><br><small>Expected host: _dmarc." + domain + "</small><br><small>Raw value: " + (dmarcRecords.join(", ") || noRecord()) + "</small></div>";
 if(!dmarcPass){
 copyable.push(
 "DMARC TXT Record:\n\n" +
@@ -146,7 +153,7 @@ const normalizeSingle = arr => arr.map(r => r.replace(/\.$/, "").toLowerCase().t
 const dkim1Pass = normalizeSingle(dkim1Records).includes("dkim1.mandrillapp.com");
 const dkim2Pass = normalizeSingle(dkim2Records).includes("dkim2.mandrillapp.com");
 const dkimPass = dkim1Pass && dkim2Pass;
-resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span><br><small>mte1._domainkey." + domain + " -> " + (dkim1Records.join(", ") || "No record found") + "</small><br><small>mte2._domainkey." + domain + " -> " + (dkim2Records.join(", ") || "No record found") + "</small></div>";
+resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span><br><small>mte1._domainkey." + domain + " -> " + (dkim1Records.join(", ") || noRecord()) + "</small><br><small>mte2._domainkey." + domain + " -> " + (dkim2Records.join(", ") || noRecord()) + "</small></div>";
 if(!dkimPass){
 let dkimInstructions = "DKIM CNAME Records:\n";
 if(!dkim1Pass){
@@ -178,7 +185,7 @@ const cioPass = cioRecords.length > 0 && !hasDuplicateCio && !hasSpaceCio;
 const sg1Pass = sg1Records.length > 0 && !hasDuplicateSg1 && !hasSpaceSg1;
 const sg12Pass = sg12Records.length > 0 && !hasDuplicateSg12 && !hasSpaceSg12;
 const allCioPass = cioPass && sg1Pass && sg12Pass;
-resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span><br><small>customerio." + domain + " -> " + (cioRecords.join(", ") || "No record found") + "</small><br><small>sg1._domainkey." + domain + " -> " + (sg1Records.join(", ") || "No record found") + "</small><br><small>sg12._domainkey." + domain + " -> " + (sg12Records.join(", ") || "No record found") + "</small></div>";
+resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span><br><small>customerio." + domain + " -> " + (cioRecords.join(", ") || noRecord()) + "</small><br><small>sg1._domainkey." + domain + " -> " + (sg1Records.join(", ") || noRecord()) + "</small><br><small>sg12._domainkey." + domain + " -> " + (sg12Records.join(", ") || noRecord()) + "</small></div>";
 if(!allCioPass){
 let msg = "CustomerIO / SendGrid CNAME Records Missing:\n";
 if(cioRecords.length === 0){
