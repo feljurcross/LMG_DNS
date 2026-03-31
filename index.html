@@ -26,14 +26,14 @@ text-align: left;
 cursor: pointer;
 padding: 5px 10px;
 margin-top: 5px;
-background: #0073e6;
+background: ;
 color: #fff;
 border: none;
 border-radius: 4px;
 }
 .instructions {
 border: 1px solid #ccc;
-background: #f0f8ff;
+background: ;
 padding: 15px;
 margin-top: 30px;
 border-radius: 6px;
@@ -79,17 +79,20 @@ async function fetchDNS(name, type){
 const url = "https://cloudflare-dns.com/dns-query?name=" + name + "&type=" + type;
 const res = await fetch(url, { headers: { "Accept": "application/dns-json" } });
 const data = await res.json();
-return data.Answer ? data.Answer.map(r => r.data.replace(/"/g, "")): [];
+return data.Answer ? data.Answer.map(r => r.data.replace(/"/g, "")) : [];
 }
+
 async function checkDNS(){
 const domain = document.getElementById("domain").value.trim();
 if(!domain) return alert("Please enter a domain");
 let resultsHTML = "";
 const copyable = [];
 const nonCopyable = [];
+
 try{
 const txtRecords = await fetchDNS(domain, "TXT");
-// 1. SPF - must contain both sendgrid and mandrillapp includes
+
+// 1. SPF
 const spfRecord = txtRecords.find(r =>
 r.includes("include:sendgrid.net") && r.includes("include:spf.mandrillapp.com")
 );
@@ -97,9 +100,16 @@ const spfPass = !!spfRecord;
 const spfRaw = txtRecords.find(r => r.includes("spf1")) || "No SPF record found";
 resultsHTML += "<div class='box'>SPF: <span class='" + (spfPass?"pass":"fail") + "'>" + (spfPass?"PASS":"FAIL") + "</span><br><small>Raw value: " + spfRaw + "</small></div>";
 if(!spfPass){
-copyable.push("SPF TXT Record:\nPlease include in your SPF:\nv=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all\n(Note: Add to existing SPF, do NOT create new if exists)");
+copyable.push(
+"SPF TXT Record:\n" +
+"(Note: Add to existing SPF, do NOT create new if exists)\n\n" +
+"Type: TXT\n" +
+"Host: @\n" +
+"Value: v=spf1 include:sendgrid.net include:spf.mandrillapp.com ~all"
+);
 }
-// 2. Mandrill - must start with mandrill_verify, no leading/trailing spaces
+
+// 2. Mandrill Verify
 const mandrillRecords = txtRecords.filter(r => r.startsWith("mandrill_verify"));
 if(mandrillRecords.length > 0){
 const spacingIssue = mandrillRecords.some(r => r !== r.trim());
@@ -111,29 +121,50 @@ resultsHTML += "<div class='box'>Mandrill Verify: <span class='pass'>PASS</span>
 }
 } else {
 resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>FAIL</span><br><small>No TXT record found.</small></div>";
-nonCopyable.push("Mandrill Verify:\nNo TXT record found.");
+nonCopyable.push("Mandrill Verify:\nNo TXT record found.\nPlease log in to Mandrill to retrieve the verification TXT record for this domain.");
 }
-// 3. DMARC - must have v=DMARC1 and p=none or p=quarantine
+
+// 3. DMARC
 const dmarcRecords = await fetchDNS("_dmarc." + domain, "TXT");
 const dmarcPass = dmarcRecords.some(r =>
 r.includes("v=DMARC1") && (r.includes("p=none") || r.includes("p=quarantine"))
 );
 resultsHTML += "<div class='box'>DMARC: <span class='" + (dmarcPass?"pass":"fail") + "'>" + (dmarcPass?"PASS":"FAIL") + "</span><br><small>Expected host: _dmarc." + domain + "</small><br><small>Raw value: " + (dmarcRecords.join(", ") || "No record found") + "</small></div>";
 if(!dmarcPass){
-copyable.push("DMARC TXT Record:\nHost: _dmarc." + domain + "\nValue: v=DMARC1; p=none;");
+copyable.push(
+"DMARC TXT Record:\n\n" +
+"Type: TXT\n" +
+"Host: _dmarc." + domain + "\n" +
+"Value: v=DMARC1; p=none;"
+);
 }
-// 4. DKIM - mte1 and mte2 must point to dkim1 and dkim2 mandrillapp
+
+// 4. DKIM
 const dkim1Records = await fetchDNS("mte1._domainkey." + domain, "CNAME");
 const dkim2Records = await fetchDNS("mte2._domainkey." + domain, "CNAME");
-const normalizeSingle = arr => arr.map(r => r.replace(/.$/, "").toLowerCase().trim());
+const normalizeSingle = arr => arr.map(r => r.replace(/\.$/, "").toLowerCase().trim());
 const dkim1Pass = normalizeSingle(dkim1Records).includes("dkim1.mandrillapp.com");
 const dkim2Pass = normalizeSingle(dkim2Records).includes("dkim2.mandrillapp.com");
 const dkimPass = dkim1Pass && dkim2Pass;
 resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span><br><small>mte1._domainkey." + domain + " -> " + (dkim1Records.join(", ") || "No record found") + "</small><br><small>mte2._domainkey." + domain + " -> " + (dkim2Records.join(", ") || "No record found") + "</small></div>";
 if(!dkimPass){
-copyable.push("DKIM CNAME Records:\nmte1._domainkey." + domain + " -> dkim1.mandrillapp.com\nmte2._domainkey." + domain + " -> dkim2.mandrillapp.com");
+let dkimInstructions = "DKIM CNAME Records:\n";
+if(!dkim1Pass){
+dkimInstructions +=
+"\nType: CNAME\n" +
+"Host: mte1._domainkey." + domain + "\n" +
+"Value: dkim1.mandrillapp.com";
 }
-// 5. CustomerIO/SendGrid - all 3 CNAMEs must exist, no duplicates, no spaces
+if(!dkim2Pass){
+dkimInstructions +=
+"\n\nType: CNAME\n" +
+"Host: mte2._domainkey." + domain + "\n" +
+"Value: dkim2.mandrillapp.com";
+}
+copyable.push(dkimInstructions.trim());
+}
+
+// 5. CustomerIO/SendGrid
 const cioRecords = await fetchDNS("customerio." + domain, "CNAME");
 const sg1Records = await fetchDNS("sg1._domainkey." + domain, "CNAME");
 const sg12Records = await fetchDNS("sg12._domainkey." + domain, "CNAME");
@@ -161,21 +192,46 @@ let sg12Issue = "";
 if(sg12Records.length === 0) sg12Issue = "No CNAME record found.";
 else if(hasDuplicateSg12) sg12Issue = "Duplicate records found.";
 else if(hasSpaceSg12) sg12Issue = "Space found in record.";
-let msg = "CustomerIO / SendGrid:\n";
-if(cioIssue) msg += "customerio." + domain + ": " + cioIssue + "\n";
-if(sg1Issue) msg += "sg1._domainkey." + domain + ": " + sg1Issue + "\n";
-if(sg12Issue) msg += "sg12._domainkey." + domain + ": " + sg12Issue;
+
+let msg = "CustomerIO / SendGrid CNAME Records:\n";
+if(cioRecords.length === 0){
+msg +=
+"\nType: CNAME\n" +
+"Host: customerio." + domain + "\n" +
+"Value: u11692406.wl157.sendgrid.net";
+} else if(cioIssue){
+msg += "\ncustomerio." + domain + ": " + cioIssue;
+}
+if(sg1Records.length === 0){
+msg +=
+"\n\nType: CNAME\n" +
+"Host: sg1._domainkey." + domain + "\n" +
+"Value: sg1.domainkey.u11692406.wl157.sendgrid.net";
+} else if(sg1Issue){
+msg += "\nsg1._domainkey." + domain + ": " + sg1Issue;
+}
+if(sg12Records.length === 0){
+msg +=
+"\n\nType: CNAME\n" +
+"Host: sg12._domainkey." + domain + "\n" +
+"Value: sg12.domainkey.u11692406.wl157.sendgrid.net";
+} else if(sg12Issue){
+msg += "\nsg12._domainkey." + domain + ": " + sg12Issue;
+}
 nonCopyable.push(msg.trim());
 }
+
 } catch(e){
 resultsHTML += "<div class='box'>ERROR: Could not check DNS. Try again later.</div>";
 }
+
 document.getElementById("results").innerHTML = resultsHTML;
 document.getElementById("copyableInstructions").innerText = copyable.join("\n\n");
 document.getElementById("instructions-copyable").style.display = copyable.length > 0 ? "block" : "none";
 document.getElementById("nonCopyableInstructions").innerText = nonCopyable.join("\n\n");
 document.getElementById("instructions-noncopyable").style.display = nonCopyable.length > 0 ? "block" : "none";
 }
+
 function copyInstructions(){
 const text = document.getElementById("copyableInstructions").innerText;
 navigator.clipboard.writeText(text);
