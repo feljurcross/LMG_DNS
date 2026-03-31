@@ -180,43 +180,27 @@ const sg12Pass = sg12Records.length > 0 && !hasDuplicateSg12 && !hasSpaceSg12;
 const allCioPass = cioPass && sg1Pass && sg12Pass;
 resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span><br><small>customerio." + domain + " -> " + (cioRecords.join(", ") || "No record found") + "</small><br><small>sg1._domainkey." + domain + " -> " + (sg1Records.join(", ") || "No record found") + "</small><br><small>sg12._domainkey." + domain + " -> " + (sg12Records.join(", ") || "No record found") + "</small></div>";
 if(!allCioPass){
-let cioIssue = "";
-if(cioRecords.length === 0) cioIssue = "No CNAME record found.";
-else if(hasDuplicateCio) cioIssue = "Duplicate records found.";
-else if(hasSpaceCio) cioIssue = "Space found in record.";
-let sg1Issue = "";
-if(sg1Records.length === 0) sg1Issue = "No CNAME record found.";
-else if(hasDuplicateSg1) sg1Issue = "Duplicate records found.";
-else if(hasSpaceSg1) sg1Issue = "Space found in record.";
-let sg12Issue = "";
-if(sg12Records.length === 0) sg12Issue = "No CNAME record found.";
-else if(hasDuplicateSg12) sg12Issue = "Duplicate records found.";
-else if(hasSpaceSg12) sg12Issue = "Space found in record.";
-
-let msg = "CustomerIO / SendGrid CNAME Records:\n";
+let msg = "CustomerIO / SendGrid CNAME Records Missing:\n";
 if(cioRecords.length === 0){
-msg +=
-"\nType: CNAME\n" +
-"Host: customerio." + domain + "\n" +
-"Value: u11692406.wl157.sendgrid.net";
-} else if(cioIssue){
-msg += "\ncustomerio." + domain + ": " + cioIssue;
+msg += "\nHost: customerio." + domain;
+} else if(hasDuplicateCio){
+msg += "\ncustomerio." + domain + ": Duplicate records found.";
+} else if(hasSpaceCio){
+msg += "\ncustomerio." + domain + ": Space found in record.";
 }
 if(sg1Records.length === 0){
-msg +=
-"\n\nType: CNAME\n" +
-"Host: sg1._domainkey." + domain + "\n" +
-"Value: sg1.domainkey.u11692406.wl157.sendgrid.net";
-} else if(sg1Issue){
-msg += "\nsg1._domainkey." + domain + ": " + sg1Issue;
+msg += "\nHost: sg1._domainkey." + domain;
+} else if(hasDuplicateSg1){
+msg += "\nsg1._domainkey." + domain + ": Duplicate records found.";
+} else if(hasSpaceSg1){
+msg += "\nsg1._domainkey." + domain + ": Space found in record.";
 }
 if(sg12Records.length === 0){
-msg +=
-"\n\nType: CNAME\n" +
-"Host: sg12._domainkey." + domain + "\n" +
-"Value: sg12.domainkey.u11692406.wl157.sendgrid.net";
-} else if(sg12Issue){
-msg += "\nsg12._domainkey." + domain + ": " + sg12Issue;
+msg += "\nHost: sg12._domainkey." + domain;
+} else if(hasDuplicateSg12){
+msg += "\nsg12._domainkey." + domain + ": Duplicate records found.";
+} else if(hasSpaceSg12){
+msg += "\nsg12._domainkey." + domain + ": Space found in record.";
 }
 nonCopyable.push(msg.trim());
 }
