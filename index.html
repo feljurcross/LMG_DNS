@@ -29,7 +29,7 @@ text-align: left;
 cursor: pointer;
 padding: 5px 10px;
 margin-top: 5px;
-background: #007bff;
+background: ;
 color: #fff;
 border: none;
 border-radius: 4px;
@@ -175,15 +175,16 @@ copyable.push(dkimInstructions.trim());
 const cioRecords = await fetchDNS("customerio." + domain, "CNAME");
 const sg1Records = await fetchDNS("sg1._domainkey." + domain, "CNAME");
 const sg12Records = await fetchDNS("sg12._domainkey." + domain, "CNAME");
+const normalizeCname = arr => arr.map(r => r.replace(/\.$/, "").toLowerCase().trim());
 const hasDuplicateCio = cioRecords.length !== new Set(cioRecords).size;
 const hasDuplicateSg1 = sg1Records.length !== new Set(sg1Records).size;
 const hasDuplicateSg12 = sg12Records.length !== new Set(sg12Records).size;
 const hasSpaceCio = cioRecords.some(r => r !== r.trim());
 const hasSpaceSg1 = sg1Records.some(r => r !== r.trim());
 const hasSpaceSg12 = sg12Records.some(r => r !== r.trim());
-const cioPass = cioRecords.length > 0 && !hasDuplicateCio && !hasSpaceCio;
-const sg1Pass = sg1Records.length > 0 && !hasDuplicateSg1 && !hasSpaceSg1;
-const sg12Pass = sg12Records.length > 0 && !hasDuplicateSg12 && !hasSpaceSg12;
+const cioPass = normalizeCname(cioRecords).includes("u11692406.wl157.sendgrid.net") && !hasDuplicateCio && !hasSpaceCio;
+const sg1Pass = normalizeCname(sg1Records).includes("sg1.domainkey.u11692406.wl157.sendgrid.net") && !hasDuplicateSg1 && !hasSpaceSg1;
+const sg12Pass = normalizeCname(sg12Records).includes("sg12.domainkey.u11692406.wl157.sendgrid.net") && !hasDuplicateSg12 && !hasSpaceSg12;
 const allCioPass = cioPass && sg1Pass && sg12Pass;
 resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span><br><small>customerio." + domain + " -> " + (cioRecords.join(", ") || noRecord()) + "</small><br><small>sg1._domainkey." + domain + " -> " + (sg1Records.join(", ") || noRecord()) + "</small><br><small>sg12._domainkey." + domain + " -> " + (sg12Records.join(", ") || noRecord()) + "</small></div>";
 if(!allCioPass){
@@ -194,6 +195,8 @@ msg += "\nHost: customerio." + domain;
 msg += "\ncustomerio." + domain + ": Duplicate records found.";
 } else if(hasSpaceCio){
 msg += "\ncustomerio." + domain + ": Space found in record.";
+} else if(!normalizeCname(cioRecords).includes("u11692406.wl157.sendgrid.net")){
+msg += "\ncustomerio." + domain + ": Incorrect value - expected u11692406.wl157.sendgrid.net";
 }
 if(sg1Records.length === 0){
 msg += "\nHost: sg1._domainkey." + domain;
@@ -201,6 +204,8 @@ msg += "\nHost: sg1._domainkey." + domain;
 msg += "\nsg1._domainkey." + domain + ": Duplicate records found.";
 } else if(hasSpaceSg1){
 msg += "\nsg1._domainkey." + domain + ": Space found in record.";
+} else if(!normalizeCname(sg1Records).includes("sg1.domainkey.u11692406.wl157.sendgrid.net")){
+msg += "\nsg1._domainkey." + domain + ": Incorrect value - expected sg1.domainkey.u11692406.wl157.sendgrid.net";
 }
 if(sg12Records.length === 0){
 msg += "\nHost: sg12._domainkey." + domain;
@@ -208,6 +213,8 @@ msg += "\nHost: sg12._domainkey." + domain;
 msg += "\nsg12._domainkey." + domain + ": Duplicate records found.";
 } else if(hasSpaceSg12){
 msg += "\nsg12._domainkey." + domain + ": Space found in record.";
+} else if(!normalizeCname(sg12Records).includes("sg12.domainkey.u11692406.wl157.sendgrid.net")){
+msg += "\nsg12._domainkey." + domain + ": Incorrect value - expected sg12.domainkey.u11692406.wl157.sendgrid.net";
 }
 nonCopyable.push(msg.trim());
 }
@@ -229,10 +236,10 @@ navigator.clipboard.writeText(text);
 const btn = document.querySelector(".copy");
 const original = btn.innerText;
 btn.innerText = "Copied!";
-btn.style.background = "#28a745";
+btn.style.background = "";
 setTimeout(() => {
 btn.innerText = original;
-btn.style.background = "#007bff";
+btn.style.background = "";
 }, 2000);
 }
 </script>
