@@ -71,7 +71,7 @@ margin: 0 auto;
 <div style="margin-top:40px; font-size:14px; color:#555; text-align:center;">
 Powered by MyCRM Technology Support
 <div style="margin-top:10px; font-size:11px; color:#aaa; text-align:center;">
-v1.3.0
+v1.4.0
 </div>
 </div>
 <div id="instructions-copyable" class="instructions" style="display:none;">
@@ -96,13 +96,25 @@ function noRecord(){
 return "<span class='no-record'>No record found</span>";
 }
 
-// Auto-append detection helper
 async function checkAutoAppend(host, type, domain){
 const normal = await fetchDNS(host, type);
 if(normal.length > 0) return { records: normal, autoAppend: false };
 const doubled = await fetchDNS(host + "." + domain, type);
 if(doubled.length > 0) return { records: doubled, autoAppend: true };
 return { records: [], autoAppend: false };
+}
+
+function toggleAutoAppend(e){
+e.preventDefault();
+const details = document.getElementById("autoAppendDetails");
+const toggle = document.getElementById("autoAppendToggle");
+if(details.style.display === "none"){
+details.style.display = "block";
+toggle.innerText = "▲ Show less";
+} else {
+details.style.display = "none";
+toggle.innerText = "▼ Show more";
+}
 }
 
 async function checkDNS(){
@@ -186,7 +198,9 @@ const dkimAutoWarn = dkimAutoAppend ?
 (dkim1Result.autoAppend ? "<br>mte1._domainkey." + domain + "." + domain + " instead of mte1._domainkey." + domain : "") +
 (dkim2Result.autoAppend ? "<br>mte2._domainkey." + domain + "." + domain + " instead of mte2._domainkey." + domain : "") +
 "<br>Use short host names: mte1._domainkey and mte2._domainkey instead so they would resolve correctly to mte1._domainkey." + domain + " and mte2._domainkey." + domain + "</small>" : "";
-resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span>" + dkimAutoWarn + "<br><small>mte1._domainkey." + domain + " -> " + (dkim1Result.autoAppend ? "resolving as mte1._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim1Records.join(", ") || noRecord())) + "</small><br><small>mte2._domainkey." + domain + " -> " + (dkim2Result.autoAppend ? "resolving as mte2._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim2Records.join(", ") || noRecord())) + "</small></div>";
+resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span>" + dkimAutoWarn +
+"<br><small>mte1._domainkey." + domain + " -> " + (dkim1Result.autoAppend ? "resolving as mte1._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim1Records.join(", ") || noRecord())) + "</small>" +
+"<br><small>mte2._domainkey." + domain + " -> " + (dkim2Result.autoAppend ? "resolving as mte2._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim2Records.join(", ") || noRecord())) + "</small></div>";
 if(!dkimPass){
 let dkimInstructions = "DKIM CNAME Records:\n";
 if(!dkim1Pass){
@@ -288,8 +302,9 @@ nonCopyable.push(msg.trim());
 if(globalAutoAppend){
 resultsHTML = "<div class='box' style='border-color:orange; background:#fff8e1;'>" +
 "⚠️ <strong>Heads Up — Your DNS Provider is Auto-Appending!</strong><br><br>" +
-"We detected something important about how your DNS provider (e.g. GoDaddy) handles DNS records. " +
-"When you add a DNS record, your provider <strong>automatically adds your domain name to the end</strong> of whatever host value you type in. This is called <strong>Auto-Appending</strong>.<br><br>" +
+"When you add a DNS record, your provider <strong>automatically adds your domain name to the end</strong> of whatever host value you type in. This is called <strong>Auto-Appending</strong>." +
+"<br><br><a href='#' onclick='toggleAutoAppend(event)' id='autoAppendToggle' style='color:orange; font-size:13px;'>▼ Show more</a>" +
+"<div id='autoAppendDetails' style='display:none; margin-top:10px;'>" +
 "<strong>Here is a simple example of what happens:</strong><br>" +
 "Imagine your domain is <em>" + domain + "</em> and you are asked to enter a host value of:<br>" +
 "`mte1._domainkey." + domain + "`<br><br>" +
@@ -306,6 +321,7 @@ resultsHTML = "<div class='box' style='border-color:orange; background:#fff8e1;'
 "<strong>This applies to ALL DNS records</strong> — including DKIM, SendGrid, CustomerIO and DMARC. " +
 "Please check the individual records below for the exact short host names to use. " +
 "If you are unsure, please contact MyCRM Technology Support for assistance." +
+"</div>" +
 "</div>" + resultsHTML;
 }
 
