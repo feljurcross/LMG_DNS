@@ -71,7 +71,7 @@ margin: 0 auto;
 <div style="margin-top:40px; font-size:14px; color:#555; text-align:center;">
 Powered by MyCRM Technology Support
 <div style="margin-top:10px; font-size:11px; color:#aaa; text-align:center;">
-v1.4.0
+v1.5.0
 </div>
 </div>
 <div id="instructions-copyable" class="instructions" style="display:none;">
@@ -169,7 +169,9 @@ const dmarcPass = dmarcRecords.some(r =>
 r.includes("v=DMARC1") && (r.includes("p=none") || r.includes("p=quarantine"))
 ) && !dmarcResult.autoAppend;
 const dmarcAutoWarn = dmarcResult.autoAppend ?
-"<br><small style='color:orange;'>⚠️ Auto-appending detected on DMARC record! The record is publicly resolving as _dmarc." + domain + "." + domain + " instead of _dmarc." + domain + ". Use short host name: _dmarc instead so it would resolve correctly to _dmarc." + domain + "</small>" : "";
+"<br><small style='color:orange;'>⚠️ Auto-appending detected on DMARC record!<br>" +
+"_dmarc." + domain + "." + domain + " (auto-append detected)<br><br>" +
+"Kindly advise to input:<br>_dmarc<br>So it would resolve correctly.</small>" : "";
 resultsHTML += "<div class='box'>DMARC: <span class='" + (dmarcPass?"pass":"fail") + "'>" + (dmarcPass?"PASS":"FAIL") + "</span>" + dmarcAutoWarn + "<br><small>Expected host: _dmarc." + domain + "</small><br><small>Raw value: " + (dmarcRecords.join(", ") || noRecord()) + "</small></div>";
 if(!dmarcPass){
 const dmarcHostVal = dmarcResult.autoAppend ? "_dmarc" : "_dmarc." + domain;
@@ -177,8 +179,7 @@ copyable.push(
 "DMARC TXT Record:\n\n" +
 "Type: TXT\n" +
 "Host: " + dmarcHostVal + "\n" +
-"Value: v=DMARC1; p=none;" +
-(dmarcResult.autoAppend ? "\n\n⚠️ Note: Your DNS provider auto-appends the domain. Use the short host name above and it will automatically resolve to _dmarc." + domain : "")
+"Value: v=DMARC1; p=none;"
 );
 }
 
@@ -195,12 +196,12 @@ const dkim2Pass = normalizeSingle(dkim2Records).includes("dkim2.mandrillapp.com"
 const dkimPass = dkim1Pass && dkim2Pass;
 const dkimAutoWarn = dkimAutoAppend ?
 "<br><small style='color:orange;'>⚠️ Auto-appending detected on DKIM records! The records are publicly resolving as:" +
-(dkim1Result.autoAppend ? "<br>mte1._domainkey." + domain + "." + domain + " instead of mte1._domainkey." + domain : "") +
-(dkim2Result.autoAppend ? "<br>mte2._domainkey." + domain + "." + domain + " instead of mte2._domainkey." + domain : "") +
-"<br>Use short host names: mte1._domainkey and mte2._domainkey instead so they would resolve correctly to mte1._domainkey." + domain + " and mte2._domainkey." + domain + "</small>" : "";
+(dkim1Result.autoAppend ? "<br>mte1._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
+(dkim2Result.autoAppend ? "<br>mte2._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
+"<br><br>Kindly advise to input:<br>mte1._domainkey<br>mte2._domainkey<br>So it would resolve correctly.</small>" : "";
 resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span>" + dkimAutoWarn +
-"<br><small>mte1._domainkey." + domain + " -> " + (dkim1Result.autoAppend ? "resolving as mte1._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim1Records.join(", ") || noRecord())) + "</small>" +
-"<br><small>mte2._domainkey." + domain + " -> " + (dkim2Result.autoAppend ? "resolving as mte2._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim2Records.join(", ") || noRecord())) + "</small></div>";
+"<br><small>mte1._domainkey." + domain + " -> " + (dkim1Result.autoAppend ? "mte1._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim1Records.join(", ") || noRecord())) + "</small>" +
+"<br><small>mte2._domainkey." + domain + " -> " + (dkim2Result.autoAppend ? "mte2._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim2Records.join(", ") || noRecord())) + "</small></div>";
 if(!dkimPass){
 let dkimInstructions = "DKIM CNAME Records:\n";
 if(!dkim1Pass){
@@ -214,9 +215,6 @@ dkimInstructions +=
 "\n\nType: CNAME\n" +
 "Host: " + (dkim2Result.autoAppend ? "mte2._domainkey" : "mte2._domainkey." + domain) + "\n" +
 "Value: dkim2.mandrillapp.com";
-}
-if(dkimAutoAppend){
-dkimInstructions += "\n\n⚠️ Note: Your DNS provider auto-appends the domain. Use the short host names above and they will automatically resolve to mte1._domainkey." + domain + " and mte2._domainkey." + domain;
 }
 copyable.push(dkimInstructions.trim());
 }
@@ -243,14 +241,18 @@ const sg12Pass = normalizeCname(sg12Records).includes("sg12.domainkey.u11692406.
 const allCioPass = cioPass && sg1Pass && sg12Pass;
 const sgAutoWarn = sgAutoAppend ?
 "<br><small style='color:orange;'>⚠️ Auto-appending detected on SendGrid/CustomerIO records! The records are publicly resolving as:" +
-(cioResult.autoAppend ? "<br>customerio." + domain + "." + domain + " instead of customerio." + domain : "") +
-(sg1Result.autoAppend ? "<br>sg1._domainkey." + domain + "." + domain + " instead of sg1._domainkey." + domain : "") +
-(sg12Result.autoAppend ? "<br>sg12._domainkey." + domain + "." + domain + " instead of sg12._domainkey." + domain : "") +
-"<br>Use short host names instead so they resolve correctly.</small>" : "";
+(cioResult.autoAppend ? "<br>customerio." + domain + "." + domain + " (auto-append detected)" : "") +
+(sg1Result.autoAppend ? "<br>sg1._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
+(sg12Result.autoAppend ? "<br>sg12._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
+"<br><br>Kindly advise to input:" +
+(cioResult.autoAppend ? "<br>customerio" : "") +
+(sg1Result.autoAppend ? "<br>sg1._domainkey" : "") +
+(sg12Result.autoAppend ? "<br>sg12._domainkey" : "") +
+"<br>So it would resolve correctly.</small>" : "";
 resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span>" + sgAutoWarn +
-"<br><small>customerio." + domain + " -> " + (cioResult.autoAppend ? "resolving as customerio." + domain + "." + domain + " (auto-append detected)" : (cioRecords.join(", ") || noRecord())) + "</small>" +
-"<br><small>sg1._domainkey." + domain + " -> " + (sg1Result.autoAppend ? "resolving as sg1._domainkey." + domain + "." + domain + " (auto-append detected)" : (sg1Records.join(", ") || noRecord())) + "</small>" +
-"<br><small>sg12._domainkey." + domain + " -> " + (sg12Result.autoAppend ? "resolving as sg12._domainkey." + domain + "." + domain + " (auto-append detected)" : (sg12Records.join(", ") || noRecord())) + "</small></div>";
+"<br><small>customerio." + domain + " -> " + (cioResult.autoAppend ? "customerio." + domain + "." + domain + " (auto-append detected)" : (cioRecords.join(", ") || noRecord())) + "</small>" +
+"<br><small>sg1._domainkey." + domain + " -> " + (sg1Result.autoAppend ? "sg1._domainkey." + domain + "." + domain + " (auto-append detected)" : (sg1Records.join(", ") || noRecord())) + "</small>" +
+"<br><small>sg12._domainkey." + domain + " -> " + (sg12Result.autoAppend ? "sg12._domainkey." + domain + "." + domain + " (auto-append detected)" : (sg12Records.join(", ") || noRecord())) + "</small></div>";
 if(!allCioPass){
 let msg = "CustomerIO / SendGrid CNAME Records:\n";
 if(!cioPass){
@@ -292,35 +294,31 @@ msg += "\nsg12._domainkey." + domain + ": Space found in record.";
 msg += "\nsg12._domainkey." + domain + ": Incorrect value - expected sg12.domainkey.u11692406.wl157.sendgrid.net";
 }
 }
-if(sgAutoAppend){
-msg += "\n\n⚠️ Note: Your DNS provider auto-appends the domain. Use the short host names above and they will automatically resolve correctly.";
-}
 nonCopyable.push(msg.trim());
 }
 
 // Global auto-append warning banner
 if(globalAutoAppend){
 resultsHTML = "<div class='box' style='border-color:orange; background:#fff8e1;'>" +
-"⚠️ <strong>Heads Up — Your DNS Provider is Auto-Appending!</strong><br><br>" +
-"When you add a DNS record, your provider <strong>automatically adds your domain name to the end</strong> of whatever host value you type in. This is called <strong>Auto-Appending</strong>." +
+"⚠️ <strong>Heads Up — Auto-Appending Detected on this Domain!</strong><br><br>" +
+"When DNS records are added by the broker's DNS provider, the provider is <strong>automatically appending the domain name to the end</strong> of the host value entered. This behaviour is known as <strong>Auto-Appending</strong>." +
+"<br><br>This means that if the full domain is included in the host field, the provider will append it again — resulting in a doubled-up host that will not resolve correctly publicly, even though it appears correct in the DNS panel." +
 "<br><br><a href='#' onclick='toggleAutoAppend(event)' id='autoAppendToggle' style='color:orange; font-size:13px;'>▼ Show more</a>" +
 "<div id='autoAppendDetails' style='display:none; margin-top:10px;'>" +
-"<strong>Here is a simple example of what happens:</strong><br>" +
-"Imagine your domain is <em>" + domain + "</em> and you are asked to enter a host value of:<br>" +
+"<strong>Here is a simple example of what is happening:</strong><br>" +
+"The broker's domain is <em>" + domain + "</em> and the DNS record was entered with the full host value of:<br>" +
 "`mte1._domainkey." + domain + "`<br><br>" +
-"Because your DNS provider auto-appends, it will automatically add your domain to the end, resulting in:<br>" +
+"Because the DNS provider is auto-appending, it automatically added the domain to the end, resulting in:<br>" +
 "`mte1._domainkey." + domain + "." + domain + "` ❌<br><br>" +
-"This looks correct in your DNS panel but it is actually broken behind the scenes — which is why the records are not resolving correctly publicly.<br><br>" +
-"<strong>What you need to do instead:</strong><br>" +
-"When adding DNS records, use the <strong>short host name only</strong> — without your domain name at the end. Your DNS provider will automatically add the domain for you.<br><br>" +
-"For example, instead of typing:<br>" +
+"This appears correct in the broker's DNS panel but is actually resolving incorrectly publicly — which is why the records are failing validation.<br><br>" +
+"<strong>What needs to be corrected:</strong><br>" +
+"When adding DNS records, the broker's IT team or DNS provider should use the <strong>short host name only</strong> — without the domain name at the end. The DNS provider will automatically append the domain.<br><br>" +
+"For example, instead of entering:<br>" +
 "`mte1._domainkey." + domain + "`<br>" +
-"Just type:<br>" +
+"It should be entered as:<br>" +
 "`mte1._domainkey` ✅<br><br>" +
-"Your DNS provider will handle the rest and the final result will correctly resolve to `mte1._domainkey." + domain + "`.<br><br>" +
-"<strong>This applies to ALL DNS records</strong> — including DKIM, SendGrid, CustomerIO and DMARC. " +
-"Please check the individual records below for the exact short host names to use. " +
-"If you are unsure, please contact MyCRM Technology Support for assistance." +
+"The DNS provider will handle the rest and the record will correctly resolve to `mte1._domainkey." + domain + "`.<br><br>" +
+"<strong>This applies to ALL DNS records</strong> — including DKIM, SendGrid, CustomerIO and DMARC. Please refer to the individual records below for the exact short host names that need to be corrected. If further assistance is needed, escalate to MyCRM Technology Support." +
 "</div>" +
 "</div>" + resultsHTML;
 }
