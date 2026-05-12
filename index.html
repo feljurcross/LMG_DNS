@@ -18,6 +18,10 @@ font-weight: bold;
 .no-record {
 color: red;
 }
+.warn {
+color: orange;
+font-weight: bold;
+}
 .box {
 border: 1px solid #ccc;
 padding: 15px;
@@ -67,7 +71,7 @@ margin: 0 auto;
 <div style="margin-top:40px; font-size:14px; color:#555; text-align:center;">
 Powered by MyCRM Technology Support
 <div style="margin-top:10px; font-size:11px; color:#aaa; text-align:center;">
-v1.1.0
+v1.2.0
 </div>
 </div>
 <div id="instructions-copyable" class="instructions" style="display:none;">
@@ -92,12 +96,22 @@ function noRecord(){
 return "<span class='no-record'>No record found</span>";
 }
 
+// Auto-append detection helper
+async function checkAutoAppend(host, type, domain){
+const normal = await fetchDNS(host, type);
+if(normal.length > 0) return { records: normal, autoAppend: false };
+const doubled = await fetchDNS(host + "." + domain, type);
+if(doubled.length > 0) return { records: doubled, autoAppend: true };
+return { records: [], autoAppend: false };
+}
+
 async function checkDNS(){
 const domain = document.getElementById("domain").value.trim();
 if(!domain) return alert("Please enter a domain");
 let resultsHTML = "";
 const copyable = [];
 const nonCopyable = [];
+let globalAutoAppend = false;
 
 try{
 const txtRecords = await fetchDNS(domain, "TXT");
@@ -134,50 +148,68 @@ resultsHTML += "<div class='box'>Mandrill Verify: <span class='fail'>FAIL</span>
 nonCopyable.push("Mandrill Verify:\nNo TXT record found.\nPlease log in to Mandrill to retrieve the verification TXT record for this domain.");
 }
 
-// 3. DMARC
-const dmarcRecords = await fetchDNS("_dmarc." + domain, "TXT");
+// 3. DMARC with auto-append detection
+const dmarcHost = "_dmarc." + domain;
+const dmarcResult = await checkAutoAppend(dmarcHost, "TXT", domain);
+if(dmarcResult.autoAppend) globalAutoAppend = true;
+const dmarcRecords = dmarcResult.records;
 const dmarcPass = dmarcRecords.some(r =>
 r.includes("v=DMARC1") && (r.includes("p=none") || r.includes("p=quarantine"))
 );
-resultsHTML += "<div class='box'>DMARC: <span class='" + (dmarcPass?"pass":"fail") + "'>" + (dmarcPass?"PASS":"FAIL") + "</span><br><small>Expected host: _dmarc." + domain + "</small><br><small>Raw value: " + (dmarcRecords.join(", ") || noRecord()) + "</small></div>";
+const dmarcAutoWarn = dmarcResult.autoAppend ? "<br><small style='color:orange;'>⚠️ Auto-appending detected on DMARC record! Use short host name: _dmarc</small>" : "";
+resultsHTML += "<div class='box'>DMARC: <span class='" + (dmarcPass?"pass":"fail") + "'>" + (dmarcPass?"PASS":"FAIL") + "</span>" + dmarcAutoWarn + "<br><small>Expected host: _dmarc." + domain + "</small><br><small>Raw value: " + (dmarcRecords.join(", ") || noRecord()) + "</small></div>";
 if(!dmarcPass){
+const dmarcHost2 = dmarcResult.autoAppend ? "_dmarc" : "_dmarc." + domain;
 copyable.push(
 "DMARC TXT Record:\n\n" +
 "Type: TXT\n" +
-"Host: _dmarc." + domain + "\n" +
-"Value: v=DMARC1; p=none;"
+"Host: " + dmarcHost2 + "\n" +
+"Value: v=DMARC1; p=none;" +
+(dmarcResult.autoAppend ? "\n\n⚠️ Note: Your DNS provider auto-appends the domain. Use the short host name above." : "")
 );
 }
 
-// 4. DKIM
-const dkim1Records = await fetchDNS("mte1._domainkey." + domain, "CNAME");
-const dkim2Records = await fetchDNS("mte2._domainkey." + domain, "CNAME");
+// 4. DKIM with auto-append detection
+const dkim1Result = await checkAutoAppend("mte1._domainkey." + domain, "CNAME", domain);
+const dkim2Result = await checkAutoAppend("mte2._domainkey." + domain, "CNAME", domain);
+if(dkim1Result.autoAppend || dkim2Result.autoAppend) globalAutoAppend = true;
+const dkim1Records = dkim1Result.records;
+const dkim2Records = dkim2Result.records;
 const normalizeSingle = arr => arr.map(r => r.replace(/\.$/, "").toLowerCase().trim());
 const dkim1Pass = normalizeSingle(dkim1Records).includes("dkim1.mandrillapp.com");
 const dkim2Pass = normalizeSingle(dkim2Records).includes("dkim2.mandrillapp.com");
 const dkimPass = dkim1Pass && dkim2Pass;
-resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span><br><small>mte1._domainkey." + domain + " -> " + (dkim1Records.join(", ") || noRecord()) + "</small><br><small>mte2._domainkey." + domain + " -> " + (dkim2Records.join(", ") || noRecord()) + "</small></div>";
+const dkimAutoWarn = (dkim1Result.autoAppend || dkim2Result.autoAppend) ? "<br><small style='color:orange;'>⚠️ Auto-appending detected on DKIM records! Use short host names: mte1._domainkey and mte2._domainkey</small>" : "";
+resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span>" + dkimAutoWarn + "<br><small>mte1._domainkey." + domain + " -> " + (dkim1Records.join(", ") || noRecord()) + "</small><br><small>mte2._domainkey." + domain + " -> " + (dkim2Records.join(", ") || noRecord()) + "</small></div>";
 if(!dkimPass){
 let dkimInstructions = "DKIM CNAME Records:\n";
+const useShort = dkim1Result.autoAppend || dkim2Result.autoAppend;
 if(!dkim1Pass){
 dkimInstructions +=
 "\nType: CNAME\n" +
-"Host: mte1._domainkey." + domain + "\n" +
+"Host: " + (useShort ? "mte1._domainkey" : "mte1._domainkey." + domain) + "\n" +
 "Value: dkim1.mandrillapp.com";
 }
 if(!dkim2Pass){
 dkimInstructions +=
 "\n\nType: CNAME\n" +
-"Host: mte2._domainkey." + domain + "\n" +
+"Host: " + (useShort ? "mte2._domainkey" : "mte2._domainkey." + domain) + "\n" +
 "Value: dkim2.mandrillapp.com";
+}
+if(useShort){
+dkimInstructions += "\n\n⚠️ Note: Your DNS provider auto-appends the domain. Use the short host names above.";
 }
 copyable.push(dkimInstructions.trim());
 }
 
-// 5. CustomerIO/SendGrid
-const cioRecords = await fetchDNS("customerio." + domain, "CNAME");
-const sg1Records = await fetchDNS("sg1._domainkey." + domain, "CNAME");
-const sg12Records = await fetchDNS("sg12._domainkey." + domain, "CNAME");
+// 5. CustomerIO/SendGrid with auto-append detection
+const cioResult = await checkAutoAppend("customerio." + domain, "CNAME", domain);
+const sg1Result = await checkAutoAppend("sg1._domainkey." + domain, "CNAME", domain);
+const sg12Result = await checkAutoAppend("sg12._domainkey." + domain, "CNAME", domain);
+if(cioResult.autoAppend || sg1Result.autoAppend || sg12Result.autoAppend) globalAutoAppend = true;
+const cioRecords = cioResult.records;
+const sg1Records = sg1Result.records;
+const sg12Records = sg12Result.records;
 const normalizeCname = arr => arr.map(r => r.replace(/\.$/, "").toLowerCase().trim());
 const hasDuplicateCio = cioRecords.length !== new Set(cioRecords).size;
 const hasDuplicateSg1 = sg1Records.length !== new Set(sg1Records).size;
@@ -189,37 +221,53 @@ const cioPass = normalizeCname(cioRecords).includes("u11692406.wl157.sendgrid.ne
 const sg1Pass = normalizeCname(sg1Records).includes("sg1.domainkey.u11692406.wl157.sendgrid.net") && !hasDuplicateSg1 && !hasSpaceSg1;
 const sg12Pass = normalizeCname(sg12Records).includes("sg12.domainkey.u11692406.wl157.sendgrid.net") && !hasDuplicateSg12 && !hasSpaceSg12;
 const allCioPass = cioPass && sg1Pass && sg12Pass;
-resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span><br><small>customerio." + domain + " -> " + (cioRecords.join(", ") || noRecord()) + "</small><br><small>sg1._domainkey." + domain + " -> " + (sg1Records.join(", ") || noRecord()) + "</small><br><small>sg12._domainkey." + domain + " -> " + (sg12Records.join(", ") || noRecord()) + "</small></div>";
+const sgAutoWarn = (cioResult.autoAppend || sg1Result.autoAppend || sg12Result.autoAppend) ? "<br><small style='color:orange;'>⚠️ Auto-appending detected on SendGrid records! Use short host names: customerio, sg1._domainkey, sg12._domainkey</small>" : "";
+resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span>" + sgAutoWarn + "<br><small>customerio." + domain + " -> " + (cioRecords.join(", ") || noRecord()) + "</small><br><small>sg1._domainkey." + domain + " -> " + (sg1Records.join(", ") || noRecord()) + "</small><br><small>sg12._domainkey." + domain + " -> " + (sg12Records.join(", ") || noRecord()) + "</small></div>";
 if(!allCioPass){
-let msg = "CustomerIO / SendGrid CNAME Records Missing:\n";
+const useShort = cioResult.autoAppend || sg1Result.autoAppend || sg12Result.autoAppend;
+let msg = "CustomerIO / SendGrid CNAME Records:\n";
+if(!cioPass){
 if(cioRecords.length === 0){
-msg += "\nHost: customerio." + domain;
+msg += "\nType: CNAME\nHost: " + (useShort ? "customerio" : "customerio." + domain) + "\nValue: u11692406.wl157.sendgrid.net";
 } else if(hasDuplicateCio){
 msg += "\ncustomerio." + domain + ": Duplicate records found.";
 } else if(hasSpaceCio){
 msg += "\ncustomerio." + domain + ": Space found in record.";
-} else if(!normalizeCname(cioRecords).includes("u11692406.wl157.sendgrid.net")){
+} else {
 msg += "\ncustomerio." + domain + ": Incorrect value - expected u11692406.wl157.sendgrid.net";
 }
+}
+if(!sg1Pass){
 if(sg1Records.length === 0){
-msg += "\nHost: sg1._domainkey." + domain;
+msg += "\n\nType: CNAME\nHost: " + (useShort ? "sg1._domainkey" : "sg1._domainkey." + domain) + "\nValue: sg1.domainkey.u11692406.wl157.sendgrid.net";
 } else if(hasDuplicateSg1){
 msg += "\nsg1._domainkey." + domain + ": Duplicate records found.";
 } else if(hasSpaceSg1){
 msg += "\nsg1._domainkey." + domain + ": Space found in record.";
-} else if(!normalizeCname(sg1Records).includes("sg1.domainkey.u11692406.wl157.sendgrid.net")){
+} else {
 msg += "\nsg1._domainkey." + domain + ": Incorrect value - expected sg1.domainkey.u11692406.wl157.sendgrid.net";
 }
+}
+if(!sg12Pass){
 if(sg12Records.length === 0){
-msg += "\nHost: sg12._domainkey." + domain;
+msg += "\n\nType: CNAME\nHost: " + (useShort ? "sg12._domainkey" : "sg12._domainkey." + domain) + "\nValue: sg12.domainkey.u11692406.wl157.sendgrid.net";
 } else if(hasDuplicateSg12){
 msg += "\nsg12._domainkey." + domain + ": Duplicate records found.";
 } else if(hasSpaceSg12){
 msg += "\nsg12._domainkey." + domain + ": Space found in record.";
-} else if(!normalizeCname(sg12Records).includes("sg12.domainkey.u11692406.wl157.sendgrid.net")){
+} else {
 msg += "\nsg12._domainkey." + domain + ": Incorrect value - expected sg12.domainkey.u11692406.wl157.sendgrid.net";
 }
+}
+if(useShort){
+msg += "\n\n⚠️ Note: Your DNS provider auto-appends the domain. Use the short host names above.";
+}
 nonCopyable.push(msg.trim());
+}
+
+// Global auto-append warning
+if(globalAutoAppend){
+resultsHTML = "<div class='box' style='border-color:orange; background:#fff8e1;'>⚠️ <strong>Auto-Appending Detected!</strong> Your DNS provider automatically appends the domain name to host values. Please use short host names (without the domain) when adding DNS records. Your provider will automatically add the domain. See individual records below for specific instructions.</div>" + resultsHTML;
 }
 
 } catch(e){
@@ -229,27 +277,6 @@ resultsHTML += "<div class='box'>ERROR: Could not check DNS. Try again later.</d
 document.getElementById("results").innerHTML = resultsHTML;
 document.getElementById("copyableInstructions").innerText = copyable.join("\n\n");
 document.getElementById("instructions-copyable").style.display = copyable.length > 0 ? "block" : "none";
-// Add auto-append explanation to non-copyable box if detected
-if(globalAutoAppend){
-nonCopyable.unshift(
-"⚠️ AUTO-APPENDING DETECTED\n" +
-"──────────────────────────────\n" +
-"Your DNS provider is automatically appending your domain name to the host values you enter.\n\n" +
-"What this means:\n" +
-"When you enter a host like 'mte1._domainkey', your DNS provider automatically adds your domain to the end, resulting in 'mte1._domainkey.yourdomain.com.au'.\n\n" +
-"The problem occurs when the full domain is already included in the host field. Your provider then appends the domain again, resulting in a doubled-up host like:\n" +
-"'mte1._domainkey.yourdomain.com.au.yourdomain.com.au'\n\n" +
-"This causes the DNS record to appear correct in your DNS panel but not resolve publicly.\n\n" +
-"How to fix:\n" +
-"Always use the SHORT host name without the full domain when adding DNS records. Your provider will automatically append the domain.\n\n" +
-"Example:\n" +
-"Instead of: mte1._domainkey.yourdomain.com.au\n" +
-"Use: mte1._domainkey\n\n" +
-"This applies to ALL records including DKIM, SendGrid, CustomerIO and DMARC.\n\n" +
-"If you are unsure, please contact MyCRM Technology Support for assistance."
-);
-}
-
 document.getElementById("nonCopyableInstructions").innerText = nonCopyable.join("\n\n");
 document.getElementById("instructions-noncopyable").style.display = nonCopyable.length > 0 ? "block" : "none";
 }
