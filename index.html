@@ -229,6 +229,27 @@ resultsHTML += "<div class='box'>ERROR: Could not check DNS. Try again later.</d
 document.getElementById("results").innerHTML = resultsHTML;
 document.getElementById("copyableInstructions").innerText = copyable.join("\n\n");
 document.getElementById("instructions-copyable").style.display = copyable.length > 0 ? "block" : "none";
+// Add auto-append explanation to non-copyable box if detected
+if(globalAutoAppend){
+nonCopyable.unshift(
+"⚠️ AUTO-APPENDING DETECTED\n" +
+"──────────────────────────────\n" +
+"Your DNS provider is automatically appending your domain name to the host values you enter.\n\n" +
+"What this means:\n" +
+"When you enter a host like 'mte1._domainkey', your DNS provider automatically adds your domain to the end, resulting in 'mte1._domainkey.yourdomain.com.au'.\n\n" +
+"The problem occurs when the full domain is already included in the host field. Your provider then appends the domain again, resulting in a doubled-up host like:\n" +
+"'mte1._domainkey.yourdomain.com.au.yourdomain.com.au'\n\n" +
+"This causes the DNS record to appear correct in your DNS panel but not resolve publicly.\n\n" +
+"How to fix:\n" +
+"Always use the SHORT host name without the full domain when adding DNS records. Your provider will automatically append the domain.\n\n" +
+"Example:\n" +
+"Instead of: mte1._domainkey.yourdomain.com.au\n" +
+"Use: mte1._domainkey\n\n" +
+"This applies to ALL records including DKIM, SendGrid, CustomerIO and DMARC.\n\n" +
+"If you are unsure, please contact MyCRM Technology Support for assistance."
+);
+}
+
 document.getElementById("nonCopyableInstructions").innerText = nonCopyable.join("\n\n");
 document.getElementById("instructions-noncopyable").style.display = nonCopyable.length > 0 ? "block" : "none";
 }
