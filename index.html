@@ -33,14 +33,14 @@ text-align: left;
 cursor: pointer;
 padding: 5px 10px;
 margin-top: 5px;
-background: ;
+background: #0070f3;
 color: #fff;
 border: none;
 border-radius: 4px;
 }
 .instructions {
 border: 1px solid #ccc;
-background: ;
+background: #f9f9f9;
 padding: 15px;
 margin-top: 30px;
 border-radius: 6px;
@@ -413,46 +413,19 @@ This means that if the full domain is included in the host field, the provider w
 
 <a href='#' onclick='toggleAutoAppend(event)' id='autoAppendToggle' style='color:orange; font-size:13px;'>▼ Show more</a>" +
 "<div id='autoAppendDetails' style='display:none; margin-top:10px;'>" +
-"<strong>Here is a simple example of what is happening:</strong>
-
-" +
-"The broker's domain is <em>" + domain + "</em> and the DNS record was entered with the full host value of:
-
-" +
-"`mte1._domainkey." + domain + "`
-
-" +
-"Because the DNS provider is auto-appending, it automatically added the domain to the end, resulting in:
-
-" +
-"`mte1._domainkey." + domain + "." + domain + "` ❌
-
-" +
-"This appears correct in the broker's DNS panel but is actually resolving incorrectly publicly — which is why the records are failing validation.
-
-" +
 "<strong>What needs to be corrected:</strong>
 
 " +
-"When adding DNS records, the broker's IT team or DNS provider should use the <strong>short host name only</strong> — without the domain name at the end. The DNS provider will automatically append the domain.
+"Use the <strong>short host name only</strong> — without the domain name. Your DNS provider will automatically append the domain.
 
 " +
-"For example, instead of entering:
+"Instead of: <code>mte1._domainkey." + domain + "</code>
 
 " +
-"`mte1._domainkey." + domain + "`
+"Use: <code>mte1._domainkey</code> ✅
 
 " +
-"It should be entered as:
-
-" +
-"`mte1._domainkey` ✅
-
-" +
-"The DNS provider will handle the rest and the record will correctly resolve to `mte1._domainkey." + domain + "`.
-
-" +
-"<strong>This applies to ALL DNS records</strong> — including DKIM, SendGrid, CustomerIO and DMARC. Please refer to the individual records below for the exact short host names that need to be corrected. If further assistance is needed, escalate to MyCRM Technology Support." +
+"This applies to ALL records — DKIM, SendGrid, CustomerIO, and DMARC." +
 "</div>" +
 "</div>" + resultsHTML;
 }
@@ -474,10 +447,8 @@ navigator.clipboard.writeText(text);
 const btn = document.querySelector(".copy");
 const original = btn.innerText;
 btn.innerText = "Copied!";
-btn.style.background = "";
 setTimeout(() => {
 btn.innerText = original;
-btn.style.background = "";
 }, 2000);
 }
 </script>
