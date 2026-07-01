@@ -11,7 +11,6 @@
       color: #fff;
       padding: 15px 20px;
       text-align: center;
-      font-size: 15px;
       border-bottom: 3px solid #c0392b;
     }
     .banner .label {
@@ -21,17 +20,36 @@
       color: #f39c12;
       margin-bottom: 6px;
     }
-    .banner .sub {
-      font-size: 12px;
-      color: #ccc;
-      margin-bottom: 4px;
-    }
     .banner .countdown {
       font-size: 28px;
       font-weight: bold;
       color: #e74c3c;
       letter-spacing: 4px;
       font-family: monospace;
+      margin-bottom: 8px;
+    }
+    .banner .bookmark-msg {
+      font-size: 13px;
+      color: #ccc;
+      margin-top: 6px;
+    }
+    .copy-link-btn {
+      cursor: pointer;
+      padding: 5px 14px;
+      background: #f39c12;
+      color: #1a1a1a;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      margin-left: 8px;
+      animation: pulse-btn 1.5s infinite;
+    }
+    .copy-link-btn:hover { background: #e67e22; }
+    @keyframes pulse-btn {
+      0% { box-shadow: 0 0 0 0 rgba(243,156,18,0.6); }
+      70% { box-shadow: 0 0 0 8px rgba(243,156,18,0); }
+      100% { box-shadow: 0 0 0 0 rgba(243,156,18,0); }
     }
     .pulse {
       display: inline-block;
@@ -90,46 +108,18 @@
     .copy:hover { background: #005bb5; }
     pre { background: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; }
     .container { max-width: 800px; margin: 0 auto; }
-
-    /* Footer */
-    .footer {
-      margin-top: 40px;
-      padding: 20px 40px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      color: #aaa;
-    }
-    .footer-left { text-align: left; }
-    .footer-left .bookmark-msg { color: #555; font-size: 13px; margin-bottom: 6px; }
-    .copy-link-btn {
-      cursor: pointer;
-      padding: 6px 14px;
-      background: #e74c3c;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      font-size: 13px;
-      animation: pulse-btn 1.5s infinite;
-    }
-    .copy-link-btn:hover { background: #c0392b; }
-    @keyframes pulse-btn {
-      0% { box-shadow: 0 0 0 0 rgba(231,76,60,0.6); }
-      70% { box-shadow: 0 0 0 8px rgba(231,76,60,0); }
-      100% { box-shadow: 0 0 0 0 rgba(231,76,60,0); }
-    }
-    .footer-center { text-align: center; font-size: 13px; color: #aaa; }
-    .footer-right { text-align: right; color: #e74c3c; font-size: 13px; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <!-- Banner -->
   <div class="banner" id="banner">
-    <div class="label"><span class="pulse"></span> Service Ending Soon</div>
-    <div class="sub">This tool will be decommissioned in:</div>
+    <div class="label"><span class="pulse"></span> This tool will be decommissioned in:</div>
     <div class="countdown" id="countdown">--d --h --m --s</div>
+    <div class="bookmark-msg">
+      Please update your bookmark.
+      <button class="copy-link-btn" onclick="copyNewLink()">📋 Copy New Link</button>
+    </div>
   </div>
 
   <!-- Expired screen -->
@@ -155,18 +145,9 @@
       </div>
       <div id="results"></div>
     </div>
-
-    <!-- Footer -->
-    <div class="footer">
-      <div class="footer-left">
-        <div class="bookmark-msg">Please update your bookmark.</div>
-        <button class="copy-link-btn" onclick="copyNewLink()">📋 Copy New Link</button>
-      </div>
-      <div class="footer-center">
-        Powered by MyCRM Technology Support<br>
-        <span style="font-size:11px;">v1.6.0</span>
-      </div>
-      <div class="footer-right">⚠️ Service ending soon</div>
+    <div style="margin-top:40px; text-align:center; font-size:13px; color:#aaa;">
+      Powered by MyCRM Technology Support<br>
+      <span style="font-size:11px;">v1.6.0</span>
     </div>
   </div>
 
@@ -204,7 +185,6 @@
     navigator.clipboard.writeText(newLink).then(() => alert("New link copied! Please update your bookmark."));
   }
 
-  // DNS Checker logic
   const CLOUDFLARE = "https://cloudflare-dns.com/dns-query";
 
   async function query(name, type) {
