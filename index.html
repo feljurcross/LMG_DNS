@@ -5,7 +5,7 @@
 <style>
 body { font-family: Arial; margin: 0; background: #f5f5f5; }
 
-/* Banner */
+/* Banner /
 .banner {
   background: #1a1a1a;
   color: #fff;
@@ -85,7 +85,7 @@ body { font-family: Arial; margin: 0; background: #f5f5f5; }
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* Expired screen */
+/ Expired screen /
 .expired {
   display: none;
   background: #1a1a1a;
@@ -116,7 +116,7 @@ body { font-family: Arial; margin: 0; background: #f5f5f5; }
   letter-spacing: 1px;
 }
 
-/* Tool */
+/ Tool /
 .tool { padding: 40px; }
 .pass { color: green; font-weight: bold; }
 .fail { color: red; font-weight: bold; }
@@ -139,7 +139,9 @@ pre { background: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap
   <div class="countdown" id="countdown">--d --h --m --s</div>
   <div class="new-home-msg">This tool has a new home. Please update your bookmark.</div>
   <div class="banner-btns">
-    <a class="visit-btn" href="<REDACTED> target="_blank">🔗 Visit New Link</a>
+
+* <a class="visit-btn" href="https://lmg-dns.github.io/dns-one/" target="_blank">🔗 Visit New Link</a>*
+
     <button class="copy-link-btn" onclick="copyNewLink()">📋 Copy New Link</button>
   </div>
 </div>
@@ -149,7 +151,9 @@ pre { background: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap
   <h1>⚠️ SERVICE ENDED</h1>
   <p>This tool has been decommissioned.</p>
   <p>The DNS Checker Tool has a new permanent home.</p>
-  <a href="<REDACTED> target="_blank">🔖 Go to the new DNS Checker Tool</a>
+
+* <a href="https://lmg-dns.github.io/dns-one/" target="_blank">🔖 Go to the new DNS Checker Tool</a>*
+
   <div class="static">
     ░░▒▒▓▓████████████████████████████████████████▓▓▒▒░░
 
@@ -186,7 +190,7 @@ Powered by MyCRM Technology Support
 
 <script>
 const retireDate = new Date("2026-07-18T07:30:00Z");
-const newLink = "<REDACTED>
+const newLink = "https://lmg-dns.github.io/dns-one/";
 
 function updateCountdown() {
   const now = new Date();
@@ -197,7 +201,7 @@ function updateCountdown() {
     document.getElementById("expired").style.display = "block";
     return;
   }
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const days = Math.floor(diff / (1000  60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -215,7 +219,7 @@ function copyNewLink() {
 }
 
 async function fetchDNS(name, type){
-const url = "<REDACTED> + name + "&type=" + type;
+const url = "https://dns.google/resolve?name=" + name + "&type=" + type;
 const res = await fetch(url, { headers: { "Accept": "application/dns-json" } });
 const data = await res.json();
 return data.Answer ? data.Answer.map(r => r.data.replace(/"/g, "")) : [];
@@ -343,10 +347,10 @@ const dkimDupWarn = (hasDupDkim1 || hasDupDkim2) ?
 resultsHTML += "<div class='box'>DKIM: <span class='" + (dkimPass?"pass":"fail") + "'>" + (dkimPass?"PASS":"FAIL") + "</span>" + dkimAutoWarn + dkimDupWarn +
 "
 
-<small>mte1._domainkey." + domain + " -> " + (dkim1Result.autoAppend ? "mte1._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim1Result.records.join(", ") || noRecord())) + "</small>" +
+<small>mte1._domainkey." + domain + " → " + (dkim1Result.autoAppend ? "mte1._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim1Result.records.join(", ") || noRecord())) + "</small>" +
 "
 
-<small>mte2._domainkey." + domain + " -> " + (dkim2Result.autoAppend ? "mte2._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim2Result.records.join(", ") || noRecord())) + "</small></div>";
+<small>mte2._domainkey." + domain + " → " + (dkim2Result.autoAppend ? "mte2._domainkey." + domain + "." + domain + " (auto-append detected)" : (dkim2Result.records.join(", ") || noRecord())) + "</small></div>";
 if(!dkimPass){
 let dkimInstructions = "DKIM CNAME Records:\n";
 if(!dkim1Pass){ dkimInstructions += hasDupDkim1 ? "\nmte1._domainkey." + domain + ": Duplicate found. Keep only:\nHost: mte1._domainkey\nValue: dkim1.mandrillapp.com" : "\nType: CNAME\nHost: " + (dkim1Result.autoAppend ? "mte1._domainkey" : "mte1._domainkey." + domain) + "\nValue: dkim1.mandrillapp.com"; }
@@ -382,13 +386,13 @@ const sgAutoWarn = sgAutoAppend ?
 resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span>" + sgAutoWarn +
 "
 
-<small>customerio." + domain + " -> " + (cioResult.autoAppend ? "customerio." + domain + "." + domain + " (auto-append detected)" : (cioResult.records.join(", ") || noRecord())) + "</small>" +
+<small>customerio." + domain + " → " + (cioResult.autoAppend ? "customerio." + domain + "." + domain + " (auto-append detected)" : (cioResult.records.join(", ") || noRecord())) + "</small>" +
 "
 
-<small>sg1._domainkey." + domain + " -> " + (sg1Result.autoAppend ? "sg1._domainkey." + domain + "." + domain + " (auto-append detected)" : (sg1Result.records.join(", ") || noRecord())) + "</small>" +
+<small>sg1._domainkey." + domain + " → " + (sg1Result.autoAppend ? "sg1._domainkey." + domain + "." + domain + " (auto-append detected)" : (sg1Result.records.join(", ") || noRecord())) + "</small>" +
 "
 
-<small>sg12._domainkey." + domain + " -> " + (sg12Result.autoAppend ? "sg12._domainkey." + domain + "." + domain + " (auto-append detected)" : (sg12Result.records.join(", ") || noRecord())) + "</small></div>";
+<small>sg12._domainkey." + domain + " → " + (sg12Result.autoAppend ? "sg12._domainkey." + domain + "." + domain + " (auto-append detected)" : (sg12Result.records.join(", ") || noRecord())) + "</small></div>";
 if(!allCioPass){
 let msg = "CustomerIO / SendGrid CNAME Records:\n";
 if(!cioPass){ msg += cioResult.autoAppend ? "\nType: CNAME\nHost: customerio\nValue: u11692406.wl157.sendgrid.net" : cioResult.records.length === 0 ? "\nType: CNAME\nHost: customerio." + domain + "\nValue: u11692406.wl157.sendgrid.net" : hasDuplicateCio ? "\ncustomerio." + domain + ": Duplicate records found." : hasSpaceCio ? "\ncustomerio." + domain + ": Space found in record." : "\ncustomerio." + domain + ": Incorrect value - expected u11692406.wl157.sendgrid.net"; }
