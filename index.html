@@ -5,29 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DNS Checker Tool</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
-    h1 { text-align: center; }
-    .input-row { display: flex; gap: 10px; margin-bottom: 20px; }
-    .input-row input { flex: 1; padding: 8px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
-    .input-row button { padding: 8px 16px; font-size: 1rem; cursor: pointer; background: #fff; border: 1px solid #ccc; border-radius: 4px; }
-    .footer { text-align: center; margin-top: 40px; color: #aaa; font-size: 0.85rem; }
-    .footer a { color: #0078d4; text-decoration: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f9f9f9; }
 
-    /* BANNER */
     #decom-banner {
       background: #111;
       color: #fff;
       text-align: center;
       padding: 16px;
-      border-bottom: 3px solid #e00;
-      position: relative;
+      border-bottom: 3px solid #cc0000;
     }
     #decom-banner .dot {
       display: inline-block;
       width: 10px; height: 10px;
-      background: #e00;
+      background: #cc0000;
       border-radius: 50%;
-      margin-right: 8px;
+      margin-right: 6px;
       animation: pulse 1s infinite;
     }
     @keyframes pulse {
@@ -37,38 +30,40 @@
     #decom-banner .label {
       font-size: 0.75rem;
       letter-spacing: 2px;
-      color: #e00;
+      color: #cc0000;
       text-transform: uppercase;
     }
     #countdown {
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: bold;
-      color: #e00;
+      color: #cc0000;
       font-family: monospace;
-      margin: 4px 0;
+      margin: 6px 0;
     }
-    #decom-banner .sub { font-size: 0.9rem; color: #ccc; margin-bottom: 10px; }
+    #decom-banner .sub { font-size: 0.9rem; color: #ccc; margin-bottom: 12px; }
     .banner-btns { display: flex; justify-content: center; gap: 12px; }
-    .banner-btns a, .banner-btns button {
-      padding: 8px 20px;
-      border-radius: 4px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      text-decoration: none;
-      border: none;
+    .btn-visit {
+      padding: 8px 20px; border-radius: 4px; font-size: 0.9rem;
+      cursor: pointer; text-decoration: none; border: none;
+      background: #0078d4; color: #fff;
     }
-    .btn-visit { background: #0078d4; color: #fff; }
-    .btn-copy { background: #f5a623; color: #fff; }
+    .btn-copy {
+      padding: 8px 20px; border-radius: 4px; font-size: 0.9rem;
+      cursor: pointer; text-decoration: none; border: none;
+      background: #f5a623; color: #fff;
+    }
 
-    /* EXPIRED SCREEN */
     #expired-screen {
       display: none;
       text-align: center;
       padding: 60px 20px;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
     }
-    #expired-screen h1 { font-size: 2.5rem; }
-    #expired-screen p { color: #555; }
-    #expired-screen a { color: #0078d4; font-weight: bold; }
+    #expired-screen h1 { font-size: 2.5rem; margin: 20px 0 10px; }
+    #expired-screen p { color: #aaa; margin: 8px 0; }
+    #expired-screen a { color: #cc0000; font-weight: bold; text-decoration: none; }
     .signal-bar {
       background: repeating-linear-gradient(90deg, #0f0 0px, #0f0 2px, #000 2px, #000 8px);
       height: 30px;
@@ -79,21 +74,48 @@
       0% { opacity: 1; }
       50% { opacity: 0.3; }
     }
-    .signal-label { font-family: monospace; color: #0f0; background: #000; display: inline-block; padding: 4px 12px; }
+    .signal-label {
+      font-family: monospace;
+      color: #0f0;
+      background: #000;
+      display: inline-block;
+      padding: 4px 12px;
+      border: 1px solid #0f0;
+    }
 
-    /* RESULTS */
-    .result-block { margin-top: 20px; }
-    .record-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .record-label { font-weight: bold; min-width: 80px; }
-    .status-ok { color: green; font-weight: bold; }
-    .status-warn { color: orange; font-weight: bold; }
-    .status-fail { color: red; font-weight: bold; }
+    #main-tool {
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    #main-tool h1 { text-align: center; margin-bottom: 24px; font-size: 1.8rem; }
+    .input-row { display: flex; gap: 10px; margin-bottom: 20px; }
+    .input-row input {
+      flex: 1; padding: 8px 12px; font-size: 1rem;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    .input-row button {
+      padding: 8px 18px; font-size: 1rem; cursor: pointer;
+      background: #fff; border: 1px solid #ccc; border-radius: 4px;
+    }
+    .input-row button:hover { background: #f0f0f0; }
+
+    .result-block { margin-top: 10px; }
+    .record-row {
+      display: flex; align-items: flex-start;
+      gap: 16px; padding: 14px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .record-label { font-weight: bold; min-width: 90px; font-size: 0.95rem; }
+    .status-ok { color: #2e7d32; font-weight: bold; }
+    .status-warn { color: #e65100; font-weight: bold; }
+    .status-fail { color: #c62828; font-weight: bold; }
     .detail { font-size: 0.85rem; color: #555; margin-top: 4px; }
     .copy-box {
       background: #f4f4f4;
       border: 1px solid #ddd;
       border-radius: 4px;
-      padding: 8px;
+      padding: 8px 10px;
       font-family: monospace;
       font-size: 0.8rem;
       margin-top: 6px;
@@ -101,40 +123,56 @@
       cursor: pointer;
     }
     .copy-box:hover { background: #e8e8e8; }
+    .nocopy-box {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      margin-top: 6px;
+      word-break: break-all;
+    }
     .warn-box {
       background: #fff8e1;
       border-left: 4px solid #f5a623;
-      padding: 10px;
-      margin-top: 10px;
+      padding: 10px 12px;
+      margin-top: 8px;
+      font-size: 0.85rem;
+      border-radius: 0 4px 4px 0;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-bottom: 40px;
+      color: #aaa;
       font-size: 0.85rem;
     }
+    .footer a { color: #0078d4; text-decoration: none; }
   </style>
 </head>
 <body>
 
-<!-- DECOMMISSION BANNER -->
 <div id="decom-banner">
   <div class="label"><span class="dot"></span>THIS TOOL WILL BE DECOMMISSIONED IN:</div>
   <div id="countdown">--d --h --m --s</div>
   <div class="sub">This tool has a new home. Please update your bookmark.</div>
   <div class="banner-btns">
-    <a class="btn-visit" href="https://lmg-dns.github.io/dns-one/" target="_blank">🔗 Visit New Link</a>
-    <button class="btn-copy" onclick="copyNewLink()">📋 Copy New Link</button>
+    <a class="btn-visit" href="https://lmg-dns.github.io/dns-one/" target="_blank">&#128279; Visit New Link</a>
+    <button class="btn-copy" onclick="copyNewLink()">&#128203; Copy New Link</button>
   </div>
 </div>
 
-<!-- EXPIRED SCREEN -->
 <div id="expired-screen">
   <div class="signal-bar"></div>
   <div class="signal-label">SIGNAL LOST — PLEASE UPDATE YOUR BOOKMARK</div>
-  # ⚠️ SERVICE ENDED
+  # &#9888;&#65039; SERVICE ENDED
   <p>This tool has been decommissioned.</p>
   <p>The DNS Checker Tool has a new permanent home.</p>
-  <p><a href="https://lmg-dns.github.io/dns-one/" target="_blank">🔴 Go to the new DNS Checker Tool</a></p>
+  <p><a href="https://lmg-dns.github.io/dns-one/" target="_blank">&#128308; Go to the new DNS Checker Tool</a></p>
   <div class="signal-bar"></div>
 </div>
 
-<!-- MAIN TOOL -->
 <div id="main-tool">
   # DNS Checker Tool
   <div class="input-row">
@@ -143,8 +181,8 @@
   </div>
   <div id="results"></div>
   <div class="footer">
-    Powered by <a href="#">MyCRM Technology Support</a><br/>
-    <span style="color:#ccc;">v1.6.0</span>
+    Powered by <a href="https://lmg-dns.github.io/dns-one/" target="_blank">MyCRM Technology Support</a><br/>
+    <span>v1.6.0</span>
   </div>
 </div>
 
@@ -153,118 +191,156 @@
   const retireDate = new Date("2026-07-18T07:30:00Z");
 
   function copyNewLink() {
-    navigator.clipboard.writeText(newLink).then(() => alert("Link copied!"));
+    navigator.clipboard.writeText(newLink).then(function() {
+      alert("Link copied to clipboard!");
+    });
   }
 
   function updateCountdown() {
-    const now = new Date();
-    const diff = retireDate - now;
+    var now = new Date();
+    var diff = retireDate - now;
     if (diff <= 0) {
       document.getElementById("decom-banner").style.display = "none";
       document.getElementById("expired-screen").style.display = "block";
       document.getElementById("main-tool").style.display = "none";
       return;
     }
-    const d = Math.floor(diff / 86400000);
-    const h = Math.floor((diff % 86400000) / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
+    var d = Math.floor(diff / 86400000);
+    var h = Math.floor((diff % 86400000) / 3600000);
+    var m = Math.floor((diff % 3600000) / 60000);
+    var s = Math.floor((diff % 60000) / 1000);
     document.getElementById("countdown").textContent =
-      d + "d " + String(h).padStart(2,"0") + "h " + String(m).padStart(2,"0") + "m " + String(s).padStart(2,"0") + "s";
+      d + "d " + String(h).padStart(2, "0") + "h " +
+      String(m).padStart(2, "0") + "m " +
+      String(s).padStart(2, "0") + "s";
   }
-
   setInterval(updateCountdown, 1000);
   updateCountdown();
 
   async function fetchDNS(name, type) {
-    const url = "https://dns.google/resolve?name=" + name + "&type=" + type;
-    const res = await fetch(url);
+    var url = "https://dns.google/resolve?name=" + encodeURIComponent(name) + "&type=" + type;
+    var res = await fetch(url);
     return res.json();
   }
 
   async function checkDNS() {
-    const raw = document.getElementById("domainInput").value.trim().toLowerCase();
-    const domain = raw.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-    const resultsDiv = document.getElementById("results");
+    var raw = document.getElementById("domainInput").value.trim().toLowerCase();
+    var domain = raw.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    if (!domain) { alert("Please enter a domain."); return; }
+
+    var resultsDiv = document.getElementById("results");
     resultsDiv.innerHTML = "<p>Checking <strong>" + domain + "</strong>...</p>";
 
     try {
-      const [spfData, dkimData, dmarcData, mxData] = await Promise.all([
-        fetchDNS(domain, "TXT"),
-        fetchDNS("mandrill._domainkey." + domain, "TXT"),
-        fetchDNS("_dmarc." + domain, "TXT"),
-        fetchDNS(domain, "MX")
-      ]);
+      var spfData   = await fetchDNS(domain, "TXT");
+      var dkimData  = await fetchDNS("mandrill._domainkey." + domain, "TXT");
+      var dmarcData = await fetchDNS("_dmarc." + domain, "TXT");
+      var sgData    = await fetchDNS("em." + domain, "CNAME");
 
-      let html = "<div class='result-block'>";
+      var html = "<div class='result-block'>";
 
-      // SPF
-      const txtRecords = (spfData.Answer || []).map(r => r.data.replace(/"/g, ""));
-      const spfRecords = txtRecords.filter(r => r.startsWith("v=spf1"));
-      const mandrillInSPF = spfRecords.some(r => r.includes("spf.mandrillapp.com") || r.includes("_spf.mandrillapp.com"));
-      const sendgridInSPF = spfRecords.some(r => r.includes("sendgrid.net"));
-      const hasAutoAppend = spfRecords.some(r => r.includes("~all") || r.includes("-all") || r.includes("+all"));
-      const spfCount = spfRecords.length;
+      // ── SPF ──────────────────────────────────────────────
+      var allTxt = (spfData.Answer || []).map(function(r) {
+        return r.data.replace(/"/g, "").trim();
+      });
+      var spfRecords = allTxt.filter(function(r) { return r.startsWith("v=spf1"); });
+      var spfCount = spfRecords.length;
 
-      let spfStatus = "status-ok", spfMsg = "SPF record found.";
-      if (spfCount === 0) { spfStatus = "status-fail"; spfMsg = "No SPF record found."; }
-      else if (spfCount > 1) { spfStatus = "status-warn"; spfMsg = "Multiple SPF records detected — this can cause issues."; }
+      var mandrillInSPF  = spfRecords.some(function(r) { return r.includes("spf.mandrillapp.com") || r.includes("_spf.mandrillapp.com"); });
+      var sendgridInSPF  = spfRecords.some(function(r) { return r.includes("sendgrid.net"); });
+      var hasAllMechanism = spfRecords.some(function(r) { return /[~\-+]all/.test(r); });
 
-      html += "<div class='record-row'><div class='record-label'>SPF</div><div>";
-      html += "<div class='" + spfStatus + "'>" + (spfCount > 0 ? "✔ Found" : "✘ Missing") + "</div>";
-      html += "<div class='detail'>" + spfMsg + "</div>";
-      spfRecords.forEach(r => { html += "<div class='copy-box' title='Click to copy' onclick='copyText(this)'>" + r + "</div>"; });
+      var autoAppendIssues = [];
+      spfRecords.forEach(function(r) {
+        if (/\s{2,}/.test(r)) autoAppendIssues.push("Extra spaces detected in SPF record — may indicate auto-append corruption.");
+        if ((r.match(/include:/g) || []).length > 10) autoAppendIssues.push("SPF record has more than 10 includes — may exceed DNS lookup limit.");
+      });
+
+      html += "<div class='record-row'><div class='record-label'>SPF</div><div style='flex:1'>";
+      if (spfCount === 0) {
+        html += "<div class='status-fail'>&#10008; No SPF record found</div>";
+        html += "<div class='warn-box'>&#9888;&#65039; No SPF record found for " + domain + ". This may cause emails to be rejected.</div>";
+      } else if (spfCount > 1) {
+        html += "<div class='status-warn'>&#9888; Multiple SPF records detected (" + spfCount + ")</div>";
+        html += "<div class='warn-box'>&#9888;&#65039; You have " + spfCount + " SPF records. Only one TXT SPF record is allowed — combine them into a single record.</div>";
+        spfRecords.forEach(function(r) { html += "<div class='nocopy-box'>" + r + "</div>"; });
+      } else {
+        html += "<div class='status-ok'>&#10004; SPF record found</div>";
+        spfRecords.forEach(function(r) { html += "<div class='copy-box' title='Click to copy' onclick='copyText(this)'>" + r + "</div>"; });
+      }
 
       if (!mandrillInSPF && spfCount > 0) {
-        html += "<div class='warn-box'>⚠️ Mandrill (spf.mandrillapp.com) is not included in your SPF record. MyCRM emails may not be authenticated.</div>";
+        html += "<div class='warn-box'>&#9888;&#65039; Mandrill (`spf.mandrillapp.com`) is not in your SPF record. MyCRM emails may fail authentication.</div>";
       }
       if (!sendgridInSPF && spfCount > 0) {
-        html += "<div class='warn-box'>⚠️ SendGrid (sendgrid.net) is not included in your SPF record.</div>";
+        html += "<div class='warn-box'>&#9888;&#65039; SendGrid (`sendgrid.net`) is not in your SPF record. SendGrid emails may fail authentication.</div>";
       }
-      if (spfCount > 0 && !hasAutoAppend) {
-        html += "<div class='warn-box'>⚠️ Your SPF record does not end with ~all, -all, or +all. This may cause deliverability issues.</div>";
+      if (spfCount === 1 && !hasAllMechanism) {
+        html += "<div class='warn-box'>&#9888;&#65039; SPF record is missing an `all` mechanism (~all, -all, or +all). This may cause deliverability issues.</div>";
       }
-      if (spfCount > 1) {
-        html += "<div class='warn-box'>⚠️ You have " + spfCount + " SPF records. Only one is allowed — combine them into a single record.</div>";
+      autoAppendIssues.forEach(function(msg) {
+        html += "<div class='warn-box'>&#9888;&#65039; " + msg + "</div>";
+      });
+      html += "</div></div>";
+
+      // ── MANDRILL DKIM ─────────────────────────────────────
+      var dkimRecords = (dkimData.Answer || []).map(function(r) { return r.data.replace(/"/g, "").trim(); });
+      var dkimValid = dkimRecords.some(function(r) { return r.includes("v=DKIM1") || r.includes("p="); });
+
+      html += "<div class='record-row'><div class='record-label'>Mandrill DKIM</div><div style='flex:1'>";
+      if (dkimValid) {
+        html += "<div class='status-ok'>&#10004; Mandrill DKIM found</div>";
+        html += "<div class='detail'>Record at: mandrill._domainkey." + domain + "</div>";
+      } else {
+        html += "<div class='status-fail'>&#10008; Mandrill DKIM missing</div>";
+        html += "<div class='warn-box'>&#9888;&#65039; No DKIM record found at `mandrill._domainkey." + domain + "`. MyCRM emails may land in spam.</div>";
       }
       html += "</div></div>";
 
-      // DKIM (Mandrill)
-      const dkimRecords = (dkimData.Answer || []).map(r => r.data.replace(/"/g, ""));
-      const dkimValid = dkimRecords.some(r => r.includes("v=DKIM1") || r.includes("p="));
-      html += "<div class='record-row'><div class='record-label'>DKIM</div><div>";
-      html += "<div class='" + (dkimValid ? "status-ok" : "status-fail") + "'>" + (dkimValid ? "✔ Mandrill DKIM found" : "✘ Mandrill DKIM missing") + "</div>";
-      if (!dkimValid) html += "<div class='warn-box'>⚠️ No DKIM record found at mandrill._domainkey." + domain + ". MyCRM emails may land in spam.</div>";
+      // ── SENDGRID CNAME ────────────────────────────────────
+      var sgRecords = (sgData.Answer || []).map(function(r) { return r.data.trim(); });
+      var sgValid = sgRecords.some(function(r) { return r.includes("sendgrid.net"); });
+
+      html += "<div class='record-row'><div class='record-label'>SendGrid</div><div style='flex:1'>";
+      if (sgValid) {
+        html += "<div class='status-ok'>&#10004; SendGrid CNAME found</div>";
+        html += "<div class='detail'>em." + domain + " is correctly pointing to SendGrid.</div>";
+      } else {
+        html += "<div class='status-fail'>&#10008; SendGrid CNAME missing</div>";
+        html += "<div class='warn-box'>&#9888;&#65039; No SendGrid CNAME found at `em." + domain + "`. SendGrid email tracking may not work correctly.</div>";
+      }
       html += "</div></div>";
 
-      // DMARC
-      const dmarcRecords = (dmarcData.Answer || []).map(r => r.data.replace(/"/g, ""));
-      const dmarcValid = dmarcRecords.some(r => r.startsWith("v=DMARC1"));
-      html += "<div class='record-row'><div class='record-label'>DMARC</div><div>";
-      html += "<div class='" + (dmarcValid ? "status-ok" : "status-warn") + "'>" + (dmarcValid ? "✔ DMARC record found" : "⚠ No DMARC record") + "</div>";
-      dmarcRecords.forEach(r => { html += "<div class='copy-box' onclick='copyText(this)'>" + r + "</div>"; });
-      if (!dmarcValid) html += "<div class='warn-box'>⚠️ No DMARC record found. Consider adding one for better email security.</div>";
-      html += "</div></div>";
+      // ── DMARC ─────────────────────────────────────────────
+      var dmarcRecords = (dmarcData.Answer || []).map(function(r) { return r.data.replace(/"/g, "").trim(); });
+      var dmarcValid = dmarcRecords.some(function(r) { return r.startsWith("v=DMARC1"); });
 
-      // MX
-      const mxRecords = (mxData.Answer || []).map(r => r.data);
-      html += "<div class='record-row'><div class='record-label'>MX</div><div>";
-      html += "<div class='" + (mxRecords.length > 0 ? "status-ok" : "status-fail") + "'>" + (mxRecords.length > 0 ? "✔ MX records found" : "✘ No MX records") + "</div>";
-      mxRecords.forEach(r => { html += "<div class='detail'>" + r + "</div>"; });
+      html += "<div class='record-row'><div class='record-label'>DMARC</div><div style='flex:1'>";
+      if (dmarcValid) {
+        html += "<div class='status-ok'>&#10004; DMARC record found</div>";
+        dmarcRecords.forEach(function(r) {
+          if (r.startsWith("v=DMARC1")) {
+            html += "<div class='copy-box' title='Click to copy' onclick='copyText(this)'>" + r + "</div>";
+          }
+        });
+      } else {
+        html += "<div class='status-warn'>&#9888; No DMARC record found</div>";
+        html += "<div class='warn-box'>&#9888;&#65039; No DMARC record found at `_dmarc." + domain + "`. Consider adding one for better email security.</div>";
+      }
       html += "</div></div>";
 
       html += "</div>";
       resultsDiv.innerHTML = html;
 
     } catch (e) {
-      resultsDiv.innerHTML = "<p style='color:red'>Error checking DNS. Please try again.</p>";
+      resultsDiv.innerHTML = "<p style='color:red'>&#10008; Error checking DNS. Please check the domain and try again.</p>";
     }
   }
 
   function copyText(el) {
-    navigator.clipboard.writeText(el.textContent).then(() => {
+    navigator.clipboard.writeText(el.textContent.trim()).then(function() {
       el.style.background = "#d4edda";
-      setTimeout(() => { el.style.background = ""; }, 1000);
+      setTimeout(function() { el.style.background = ""; }, 1200);
     });
   }
 </script>
