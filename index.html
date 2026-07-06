@@ -185,7 +185,7 @@ Powered by MyCRM Technology Support
 </div>
 
 <script>
-const retireDate = new Date("2026-07-18T15:30:00+08:00");
+const retireDate = new Date("2026-07-18T07:30:00Z");
 const newLink = "<REDACTED>
 
 function updateCountdown() {
@@ -296,15 +296,7 @@ r.includes("v=DMARC1") && (r.includes("p=none") || r.includes("p=quarantine") ||
 const dmarcAutoWarn = dmarcResult.autoAppend ?
 "
 
-<small style='color:orange;'>⚠️ Auto-appending detected on DMARC record!
-
-_dmarc." + domain + "." + domain + " (auto-append detected)
-
-Kindly advise to input:
-
-_dmarc
-
-So it would resolve correctly.</small>" : "";
+<small style='color:orange;'>⚠️ Auto-appending detected on DMARC record! _dmarc." + domain + "." + domain + " (auto-append detected). Kindly advise to input: _dmarc so it would resolve correctly.</small>" : "";
 const dmarcDupWarn = hasDupDmarc ?
 "
 
@@ -337,22 +329,10 @@ const dkimPass = dkim1Pass && dkim2Pass;
 const dkimAutoWarn = dkimAutoAppend ?
 "
 
-<small style='color:orange;'>⚠️ Auto-appending detected on DKIM records! The records are publicly resolving as:" +
-(dkim1Result.autoAppend ? "
-
-mte1._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
-(dkim2Result.autoAppend ? "
-
-mte2._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
-"
-
-Kindly advise to input:
-
-mte1._domainkey
-
-mte2._domainkey
-
-So it would resolve correctly.</small>" : "";
+<small style='color:orange;'>⚠️ Auto-appending detected on DKIM records!" +
+(dkim1Result.autoAppend ? " mte1._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
+(dkim2Result.autoAppend ? " mte2._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
+" Kindly advise to input mte1._domainkey and mte2._domainkey so it would resolve correctly.</small>" : "";
 const dkimDupWarn = (hasDupDkim1 || hasDupDkim2) ?
 "
 
@@ -394,31 +374,11 @@ const allCioPass = cioPass && sg1Pass && sg12Pass;
 const sgAutoWarn = sgAutoAppend ?
 "
 
-<small style='color:orange;'>⚠️ Auto-appending detected on SendGrid/CustomerIO records! The records are publicly resolving as:" +
-(cioResult.autoAppend ? "
-
-customerio." + domain + "." + domain + " (auto-append detected)" : "") +
-(sg1Result.autoAppend ? "
-
-sg1._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
-(sg12Result.autoAppend ? "
-
-sg12._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
-"
-
-Kindly advise to input:" +
-(cioResult.autoAppend ? "
-
-customerio" : "") +
-(sg1Result.autoAppend ? "
-
-sg1._domainkey" : "") +
-(sg12Result.autoAppend ? "
-
-sg12._domainkey" : "") +
-"
-
-So it would resolve correctly.</small>" : "";
+<small style='color:orange;'>⚠️ Auto-appending detected on SendGrid/CustomerIO records!" +
+(cioResult.autoAppend ? " customerio." + domain + "." + domain + " (auto-append detected)" : "") +
+(sg1Result.autoAppend ? " sg1._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
+(sg12Result.autoAppend ? " sg12._domainkey." + domain + "." + domain + " (auto-append detected)" : "") +
+" Kindly advise to input short host names so they resolve correctly.</small>" : "";
 resultsHTML += "<div class='box'>CustomerIO/SendGrid: <span class='" + (allCioPass?"pass":"fail") + "'>" + (allCioPass?"PASS":"FAIL") + "</span>" + sgAutoWarn +
 "
 
@@ -449,27 +409,27 @@ This means that if the full domain is included in the host field, the provider w
 
 The broker's domain is <em>" + domain + "</em> and the DNS record was entered with the full host value of:
 
-`mte1._domainkey." + domain + "`
+<code>mte1._domainkey." + domain + "</code>
 
 Because the DNS provider is auto-appending, it automatically added the domain to the end, resulting in:
 
-`mte1._domainkey." + domain + "." + domain + "` ❌
+<code>mte1._domainkey." + domain + "." + domain + "</code> ❌
 
 This appears correct in the broker's DNS panel but is actually resolving incorrectly publicly — which is why the records are failing validation.
 
 <strong>What needs to be corrected:</strong>
 
-When adding DNS records, the broker's IT team or DNS provider should use the <strong>short host name only</strong> — without the domain name at the end. The DNS provider will automatically append the domain.
+When adding DNS records, the broker's IT team or DNS provider should use the <strong>short host name only</strong> — without the domain name at the end.
 
 For example, instead of entering:
 
-`mte1._domainkey." + domain + "`
+<code>mte1._domainkey." + domain + "</code>
 
 It should be entered as:
 
-`mte1._domainkey` ✅
+<code>mte1._domainkey</code> ✅
 
-The DNS provider will handle the rest and the record will correctly resolve to `mte1._domainkey." + domain + "`.
+The DNS provider will handle the rest and the record will correctly resolve to <code>mte1._domainkey." + domain + "</code>.
 
 <strong>This applies to ALL DNS records</strong> — including DKIM, SendGrid, CustomerIO and DMARC.</div></div>" + resultsHTML;
 }
